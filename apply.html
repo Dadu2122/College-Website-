@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Apply for Certificate</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; background: #f4f6fa;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px 12px;
+  }
+  .card {
+    max-width: 420px; width: 100%; background: #fff;
+    border: 1px solid #e2c98a; border-radius: 16px;
+    padding: 22px 22px 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+  }
+  .head { display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; }
+  .head-title { font-weight:900; font-size:1.02rem; color:#a6772e; }
+  .sub { font-size:0.72rem; color:#5a6480; margin-bottom:18px; line-height:1.5; }
+  label { display:block; font-size:0.75rem; font-weight:700; color:#334155; margin:12px 0 5px; }
+  input, select {
+    width:100%; background:#f8f9fb; border:1px solid #d8dee8; color:#1e2333;
+    border-radius:8px; padding:11px 12px; font-size:0.85rem; outline:none;
+    font-family: inherit;
+  }
+  input:focus, select:focus { border-color:#a6772e; }
+  .req { color:#c0392b; }
+  button.submit {
+    width:100%; margin-top:18px; background:#2563eb; color:#fff; border:none;
+    border-radius:10px; padding:13px; font-size:0.88rem; font-weight:800; cursor:pointer;
+  }
+  button.submit:disabled { opacity:0.6; }
+  .success { display:none; text-align:center; padding:20px 6px; }
+  .success .tick { font-size:2.4rem; }
+  .success .msg { font-size:0.95rem; font-weight:800; color:#1e2333; margin-top:10px; }
+  .success .sub2 { font-size:0.78rem; color:#5a6480; margin-top:8px; line-height:1.5; }
+  .err { color:#c0392b; font-size:0.75rem; margin-top:10px; display:none; }
+</style>
+</head>
+<body>
+<div class="card" id="formCard">
+  <div class="head">
+    <div class="head-title">📜 Apply for Certificate</div>
+  </div>
+  <div class="sub" id="seminarLine">Seminar: —</div>
+
+  <form id="applyForm">
+    <label>Title / उपाधि <span class="req">*</span></label>
+    <select id="f-title">
+      <option>Mr.</option>
+      <option>Ms.</option>
+      <option>Mrs.</option>
+      <option>Dr.</option>
+      <option>Prof.</option>
+    </select>
+
+    <label>पूरा नाम / Full Name <span class="req">*</span></label>
+    <input id="f-name" placeholder="आपका नाम" required/>
+
+    <label>College Name <span class="req">*</span></label>
+    <input id="f-college" placeholder="आपके कॉलेज का नाम" required/>
+
+    <label>Paper Title / शोध-पत्र शीर्षक <span class="req">*</span></label>
+    <input id="f-paper" placeholder="Presented paper ka title" required/>
+
+    <label>Gmail <span class="req">*</span></label>
+    <input id="f-email" type="email" placeholder="your@gmail.com" required/>
+
+    <button type="submit" class="submit" id="submitBtn">📩 Submit Application</button>
+    <div class="err" id="errMsg"></div>
+  </form>
+
+  <div class="success" id="successBox">
+    <div class="tick">✅</div>
+    <div class="msg">Application submit ho gayi!</div>
+    <div class="sub2">Aapka certificate jald hi aapke Gmail par bheja jaayega.<br/>Aap ab is page ko band kar sakte hain.</div>
+  </div>
+</div>
+
+<script>
+// Standalone Apply-for-Certificate page — deliberately independent of the
+// main college-website file, so it's immune to that (much larger) file's
+// GitHub/CDN caching and load-time issues. Opens instantly every time.
+var GDC_FB_DB_URL = "https://gdc-nandasain-website-default-rtdb.firebaseio.com";
+var GDC_FB_API_KEY = "AIzaSyC4ApzlJgxBCHmDib7Qa5tHJ08D84d1eO4";
+
+var qs = new URLSearchParams(location.search);
+var seminarTitle = qs.get('t') || qs.get('title') || '';
+document.getElementById('seminarLine').textContent = seminarTitle ? ('Seminar: ' + seminarTitle) : 'Seminar: (not specified)';
+
+async function getIdToken() {
+  var signUrl = 'https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=' + GDC_FB_API_KEY;
+  var r = await fetch(signUrl, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ returnSecureToken:true }) });
+  var j = await r.json();
+  if (!j.idToken) throw new Error('auth failed');
+  return j.idToken;
+}
+
+document.getElementById('applyForm').addEventListener('submit', async function(e){
+  e.preventDefault();
+  var errEl = document.getElementById('errMsg');
+  errEl.style.display = 'none';
+  var btn = document.getElementById('submitBtn');
+  var name = document.getElementById('f-name').value.trim();
+  var college = document.getElementById('f-college').value.trim();
+  var paper = document.getElementById('f-paper').value.trim();
+  var email = document.getElementById('f-email').value.trim();
+  var title = document.getElementById('f-title').value;
+  if (!name || !college || !paper || !email) {
+    errEl.textContent = 'Kripya sabhi (*) fields bharein.';
+    errEl.style.display = 'block';
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = '⏳ Bheja ja raha hai...';
+  try {
+    var tok = await getIdToken();
+    var record = {
+      seminarTitle: seminarTitle, title: title, name: name, college: college,
+      paper: paper, email: email,
+      time: new Date().toLocaleString('en-IN', { dateStyle:'medium', timeStyle:'short' })
+    };
+    var resp = await fetch(GDC_FB_DB_URL + '/certapps_queue.json?auth=' + tok, {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json' },
+      body: JSON.stringify(record)
+    });
+    if (!resp.ok) throw new Error('firebase ' + resp.status);
+    document.getElementById('formCard').querySelector('form').style.display = 'none';
+    document.getElementById('seminarLine').style.display = 'none';
+    document.getElementById('successBox').style.display = 'block';
+  } catch (err) {
+    errEl.textContent = '⚠️ Kuch galat ho gaya, dobara try karein. (' + (err && err.message ? err.message : 'error') + ')';
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = '📩 Submit Application';
+  }
+});
+</script>
+</body>
+</html>
