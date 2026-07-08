@@ -572,8 +572,8 @@ try { window.dispatchEvent(new CustomEvent('gdcCloudReady')); } catch(e) {}
 }
 /* Photo frame — large square with full image + background visible */
 .principal-photo {
-  width: 440px; height: 440px; border-radius: 18px; object-fit: contain;
-  object-position: center;
+  width: 440px; height: 440px; border-radius: 18px; object-fit: cover;
+object-position: center top;
   border: 5px solid var(--gold);
   background: var(--surface);
   filter: contrast(1.14) saturate(1.18) brightness(0.95) sepia(0.07) hue-rotate(-6deg);
