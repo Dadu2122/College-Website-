@@ -3165,7 +3165,10 @@ img, iframe, embed { max-width: 100%; }
 <div class="slider-dots" id="sliderDots"></div>
 </div>
 <!-- SEARCH BAR SECTION (Between Slider and Hero) -->
-<div style="display:flex;justify-content:center;align-items:center;padding:24px 20px;background:var(--surface);border-bottom:1px solid var(--border);">
+<div style="display:flex;justify-content:center;align-items:center;gap:10px;padding:24px 20px;background:var(--surface);border-bottom:1px solid var(--border);">
+<button aria-expanded="false" aria-label="Open navigation menu" class="hamburger" id="menuBtnSearchBar" onclick="toggleMenu()" style="display:flex !important;flex-shrink:0;">
+<span></span><span></span><span></span>
+</button>
 <div class="search-wrap" role="search" style="width:100%;max-width:400px;">
 <span aria-hidden="true" class="search-icon" onclick="document.getElementById('siteSearch').focus()">🔍</span>
 <input aria-label="Search website" id="siteSearch" onblur="setTimeout(()=&gt;document.getElementById('searchResults').classList.remove('show'),200)" oninput="doSearch(this.value,'siteSearch')" placeholder="Search..." style="width:100%;" type="search"/>
