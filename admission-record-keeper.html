@@ -1,0 +1,2650 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admission Record Keeper v18 — GDC Nandasain</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{
+  --primary:#1a3a5c;--accent:#e86c2f;--bg:#f5f7fa;--white:#fff;
+  --border:#d0d7e2;--text:#1e2d3d;--muted:#6b7a8d;
+  --success:#2e7d5a;--error:#c0392b;
+  --hum:#1565c0;--sci:#2e7d32;--com:#e65100;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* LOGIN */
+#loginScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;
+  background:linear-gradient(135deg,#1a3a5c,#2c5f8a);}
+.login-card{background:#fff;border-radius:14px;padding:40px;width:100%;max-width:400px;
+  box-shadow:0 8px 32px rgba(0,0,0,0.18);}
+.login-logo{text-align:center;margin-bottom:24px;}
+.login-logo .cn{font-size:15px;color:var(--primary);font-weight:700;line-height:1.4;}
+.login-logo .sub{font-size:12px;color:var(--muted);margin-top:4px;}
+.login-title{font-size:22px;font-weight:700;color:var(--primary);text-align:center;margin-bottom:20px;}
+.mode-tabs{display:flex;gap:0;border:1.5px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:18px;}
+.mode-tab{flex:1;padding:9px;border:none;background:#f5f7fa;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);transition:.2s;}
+.mode-tab.active{background:var(--primary);color:#fff;}
+.fg{margin-bottom:14px;}
+.fg label{display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:5px;}
+.fg input{width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:7px;font-size:14px;outline:none;transition:border .2s;}
+.fg input:focus{border-color:var(--primary);}
+.btn-primary{width:100%;padding:12px;background:var(--primary);color:#fff;border:none;border-radius:7px;font-size:15px;font-weight:700;cursor:pointer;margin-top:6px;}
+.btn-primary:disabled{background:var(--muted);cursor:not-allowed;}
+#loginErr{color:var(--error);font-size:13px;text-align:center;margin-top:8px;}
+.offline-note{font-size:12px;color:var(--muted);text-align:center;margin-top:8px;line-height:1.5;}
+
+/* HEADER (top banner, like old v2) */
+#app{display:none;}
+.app-header{background:linear-gradient(120deg,#5b2c9e,#7e3fc9 45%,#a157e0);color:#fff;padding:14px 16px 16px;
+  text-align:center;position:relative;}
+.header-cn{font-size:14px;font-weight:700;}
+.header-title{font-size:22px;font-weight:800;margin-top:4px;}
+.header-sub{font-size:12px;opacity:.85;margin-top:4px;}
+.header-topright{position:absolute;top:14px;right:16px;display:flex;align-items:center;gap:10px;}
+.btn-logout{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;
+  padding:5px 12px;border-radius:5px;cursor:pointer;font-size:12px;}
+.sync-badge{font-size:11px;padding:3px 8px;border-radius:12px;font-weight:600;}
+.sync-online{background:#d4edda;color:#155724;}
+.sync-offline{background:#fff3cd;color:#856404;}
+
+/* TOP TABS (replaces sidebar) */
+.top-tabs{background:#fff;border-bottom:1.5px solid var(--border);display:flex;overflow-x:auto;
+  white-space:nowrap;position:sticky;top:0;z-index:90;box-shadow:0 1px 4px rgba(0,0,0,.05);}
+.top-tabs::-webkit-scrollbar{height:4px;}
+.tab-item{display:flex;align-items:center;gap:6px;padding:13px 16px;cursor:pointer;
+  font-size:13px;color:var(--text);border-bottom:3px solid transparent;transition:all .15s;flex-shrink:0;}
+.tab-item:hover{background:#f5f0fc;}
+.tab-item.active{color:var(--primary);border-bottom-color:#8b5fd9;font-weight:700;background:#f5f0fc;}
+.tab-item .icon{font-size:16px;}
+.tab-item:nth-child(1).active{color:#6a3fb5;border-bottom-color:#6a3fb5;}
+.tab-item:nth-child(4).active{color:var(--hum);border-bottom-color:var(--hum);background:#e8f0fb;}
+.tab-item:nth-child(5).active{color:var(--sci);border-bottom-color:var(--sci);background:#e8f5ee;}
+.tab-item:nth-child(6).active{color:var(--com);border-bottom-color:var(--com);background:#fef3e8;}
+.tab-item:nth-child(7).active{color:#a02f6b;border-bottom-color:#a02f6b;background:#fbe8f0;}
+.tab-item:nth-child(8).active{color:#0b7285;border-bottom-color:#0b7285;background:#e3f7fa;}
+.tab-item:nth-child(9).active{color:#9c5500;border-bottom-color:#9c5500;background:#fff3e0;}
+.tab-item:nth-child(10).active{color:#495057;border-bottom-color:#495057;background:#f1f3f5;}
+.menu-toggle{display:none;}
+
+/* MAIN */
+.main-content{padding:20px;min-height:calc(100vh - 52px);max-width:1200px;margin:0 auto;}
+.page{display:none;}.page.active{display:block;}
+.page-title{font-size:20px;font-weight:700;color:var(--primary);margin-bottom:4px;}
+.page-sub{font-size:12px;color:var(--muted);margin-bottom:18px;}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:20px;}
+.stat-card{border-radius:10px;padding:16px;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,.18);
+  transition:transform .15s,box-shadow .15s;border:none;}
+.stat-card:hover{transform:translateY(-3px);box-shadow:0 8px 20px rgba(0,0,0,.25);}
+.stat-card:nth-child(1){background:linear-gradient(160deg,#7a4cc7,#5b2c9e);}
+.stat-card:nth-child(1) .stat-num{color:#fff;}
+.stat-card:nth-child(1) .stat-lbl{color:#ecdffa;}
+.stat-card:nth-child(2){background:linear-gradient(160deg,#2f7cd6,#0d4b8c);}
+.stat-card:nth-child(2) .stat-num{color:#fff;}
+.stat-card:nth-child(2) .stat-lbl{color:#d6e6fa;}
+.stat-card:nth-child(3){background:linear-gradient(160deg,#3da35e,#1f5e34);}
+.stat-card:nth-child(3) .stat-num{color:#fff;}
+.stat-card:nth-child(3) .stat-lbl{color:#d8f0de;}
+.stat-card:nth-child(4){background:linear-gradient(160deg,#e58a2e,#a64d00);}
+.stat-card:nth-child(4) .stat-num{color:#fff;}
+.stat-card:nth-child(4) .stat-lbl{color:#fbe4cc;}
+.stat-card:nth-child(5){background:linear-gradient(160deg,#c84b85,#84245a);}
+.stat-card:nth-child(5) .stat-num{color:#fff;}
+.stat-card:nth-child(5) .stat-lbl{color:#fad9e7;}
+.stat-card:nth-child(6){background:linear-gradient(160deg,#1ba3b8,#075d6b);}
+.stat-card:nth-child(6) .stat-num{color:#fff;}
+.stat-card:nth-child(6) .stat-lbl{color:#d2eef2;}
+.stat-num{font-size:28px;font-weight:800;color:var(--primary);}
+.stat-lbl{font-size:11px;margin-top:3px;font-weight:700;}
+
+/* TABLE CARD */
+.table-card{background:#fff;border-radius:10px;border:1.5px solid var(--border);overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.06);margin-bottom:16px;}
+.table-head{padding:12px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1.5px solid var(--border);flex-wrap:wrap;gap:8px;}
+.table-head-title{font-size:14px;font-weight:700;color:var(--primary);}
+.filters{display:flex;gap:8px;flex-wrap:wrap;}
+.filter-sel,.search-in{padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;outline:none;background:#fff;}
+.filter-sel:focus,.search-in:focus{border-color:var(--primary);}
+.search-in{width:160px;}
+.table-wrap{overflow-x:auto;max-height:420px;overflow-y:auto;}
+table{width:100%;border-collapse:collapse;}
+th{background:#e3eaf2;padding:9px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--primary);text-transform:uppercase;white-space:nowrap;position:sticky;top:0;border:1px solid #b9c6d6;}
+td{padding:9px 12px;font-size:12px;border:1px solid var(--border);white-space:nowrap;}
+tr:nth-child(even) td{background:#f7f9fc;}
+tr:hover td{background:#eef3fa;}
+.empty-state{text-align:center;padding:32px;color:var(--muted);}
+.empty-state .icon{font-size:36px;margin-bottom:8px;}
+
+/* BADGES */
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;}
+.badge-arts{background:#e8f0fb;color:#1a3a5c;}
+.badge-sci{background:#e8f5ee;color:#2e7d5a;}
+.badge-com{background:#fef3e8;color:#c0620b;}
+.badge-ug{background:#f3e8fb;color:#6b2fa0;}
+.badge-pg{background:#fbe8f0;color:#a02f6b;}
+.cat-badge{display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;}
+.cat-GEN{background:#e0e7ef;color:#1a3a5c;}
+.cat-OBC{background:#e8f5ee;color:#2e7d32;}
+.cat-SC{background:#fbe8f0;color:#a02f6b;}
+.cat-ST{background:#fef3e8;color:#c0620b;}
+.cat-EWS{background:#e8eaf6;color:#3949ab;}
+.cat-PWD{background:#fdeaea;color:#c62828;}
+.print-title-row{display:none;}
+
+/* BUTTONS */
+.btn{padding:6px 14px;border-radius:6px;border:1.5px solid var(--border);background:#fff;color:var(--text);cursor:pointer;font-size:12px;font-weight:600;transition:all .15s;}
+.btn:hover{border-color:var(--primary);color:var(--primary);}
+.btn-del{border-color:#e8b4b0;color:var(--error);}
+.btn-del:hover{background:#fdf0ef;}
+.btn-edit{border-color:var(--border);color:var(--primary);}
+.btn-edit:hover{background:#e8f0fb;}
+.btn-print{background:var(--primary);color:#fff;border-color:var(--primary);}
+.btn-print:hover{background:#2c5f8a;}
+.btn-success{background:var(--success);color:#fff;border-color:var(--success);}
+
+/* FORM */
+.form-card{background:#fff;border-radius:10px;padding:20px;border:1.5px solid var(--border);margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.06);}
+.form-card-title{font-size:14px;font-weight:700;color:var(--primary);margin-bottom:14px;padding-bottom:8px;border-bottom:1.5px solid var(--border);}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;}
+.form-group{margin-bottom:0;}
+.form-group label{display:block;font-size:12px;font-weight:600;color:var(--text);margin-bottom:5px;}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;outline:none;background:#fff;transition:border .2s;}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--primary);}
+.form-actions{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;}
+.btn-save{padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:6px;font-size:14px;font-weight:700;cursor:pointer;}
+.btn-save:disabled{background:var(--muted);cursor:not-allowed;}
+.btn-reset{padding:10px 18px;background:#fff;color:var(--text);border:1.5px solid var(--border);border-radius:6px;font-size:13px;cursor:pointer;font-weight:600;}
+.msg{padding:9px 14px;border-radius:6px;font-size:12px;font-weight:600;margin-top:10px;display:none;}
+.msg.success{background:#e8f5ee;color:var(--success);border:1px solid #b5d9c8;}
+.msg.error{background:#fdf0ef;color:var(--error);border:1px solid #e8b4b0;}
+.checkbox-group{display:flex;flex-wrap:wrap;gap:8px;margin-top:5px;}
+.checkbox-item{display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;}
+
+/* STREAM TABS */
+.stream-tabs{display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:14px;}
+.stream-tab{padding:9px 20px;font-size:13px;font-weight:600;cursor:pointer;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .15s;}
+.stream-tab.active{color:var(--primary);border-bottom-color:var(--primary);}
+
+/* SUM CARDS */
+.sum-cards{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
+.sum-card{background:#fff;border:1.5px solid var(--border);border-radius:8px;padding:10px 14px;text-align:center;min-width:70px;}
+.sum-card .num{font-size:22px;font-weight:800;color:var(--primary);}
+.sum-card .lbl{font-size:10px;color:var(--muted);font-weight:600;}
+
+/* SUBJECT FILTER TABLE — screen */
+#sf-content table{table-layout:fixed;width:100%;}
+#sf-content th:nth-child(1),#sf-content td:nth-child(1){width:3%;}
+#sf-content th:nth-child(2),#sf-content td:nth-child(2){width:13%;}
+#sf-content th:nth-child(3),#sf-content td:nth-child(3){width:10%;}
+#sf-content th:nth-child(4),#sf-content td:nth-child(4){width:5%;}
+#sf-content th:nth-child(5),#sf-content td:nth-child(5){width:5%;}
+#sf-content th:nth-child(6),#sf-content td:nth-child(6){width:8%;}
+#sf-content th:nth-child(7),#sf-content td:nth-child(7){width:18%;white-space:normal;word-break:break-word;}
+#sf-content th:nth-child(8),#sf-content td:nth-child(8){width:7%;white-space:normal;}
+#sf-content th:nth-child(9),#sf-content td:nth-child(9){width:14%;white-space:normal;word-break:break-word;}
+#sf-content th:nth-child(10),#sf-content td:nth-child(10){width:12%;white-space:normal;word-break:break-word;}
+#sf-content th:nth-child(11),#sf-content td:nth-child(11){width:7%;}
+#sf-content td{white-space:normal;word-break:break-word;vertical-align:top;font-size:12px;}
+
+/* STREAM PICKER (entry) */
+.sp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:14px 0;}
+.sp-card{border-radius:10px;padding:16px;text-align:center;cursor:pointer;border:2px solid transparent;transition:all .2s;}
+.sp-card:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.1);}
+.sp-card.selected{border-color:#fff;box-shadow:0 0 0 3px var(--primary);}
+.sp-hum{background:linear-gradient(135deg,#1565c0,#42a5f5);color:#fff;}
+.sp-sci{background:linear-gradient(135deg,#2e7d32,#66bb6a);color:#fff;}
+.sp-com{background:linear-gradient(135deg,#e65100,#ffa726);color:#fff;}
+.sp-emoji{font-size:28px;margin-bottom:6px;}
+.sp-name{font-weight:700;font-size:14px;}
+.sp-count{font-size:11px;opacity:.85;margin-top:3px;}
+
+/* SETTINGS */
+.settings-section{background:#fff;border-radius:10px;padding:18px;border:1.5px solid var(--border);margin-bottom:14px;}
+.settings-section h3{font-size:14px;font-weight:700;color:var(--primary);margin-bottom:12px;}
+.settings-section textarea{width:100%;min-height:70px;padding:9px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;resize:vertical;outline:none;}
+
+/* PRINT — premium letterhead style */
+.print-header{display:none;}
+.print-footer{display:none;}
+@media print{
+  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;
+    font-family:'Georgia','Times New Roman',serif!important;letter-spacing:normal!important;
+    text-rendering:optimizeLegibility!important;-webkit-font-smoothing:antialiased!important;}
+
+  /* Hide UI chrome */
+  .top-tabs,.app-header,.table-head .filters,.form-card,.stats-grid,
+  .btn,.stream-tabs,.page-sub,.page-title,.sum-cards,.no-print,
+  .table-head-title ~ *{display:none!important;}
+
+  /* Keep table-head-title visible, styled as a section label rather than a UI bar */
+  .table-head{padding:0 0 7px!important;border:none!important;background:none!important;}
+  .table-head-title{display:block!important;font-size:12.5px!important;font-weight:700!important;
+    font-family:'Segoe UI',Arial,sans-serif!important;
+    color:#5b2c9e!important;margin-bottom:0!important;
+    text-transform:uppercase;letter-spacing:.5px!important;
+    padding-left:9px!important;border-left:3px solid #5b2c9e!important;}
+
+  html,body{margin:0!important;padding:0!important;background:#fff!important;
+    height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;}
+  .main-content{margin:0!important;padding:0!important;max-width:100%!important;
+    height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;}
+  .page{height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;}
+  .page.active{display:block!important;height:auto!important;min-height:0!important;}
+
+  /* ===== PREMIUM MASTHEAD =====
+     A letterhead band: crest emoji + institution name in serif display type,
+     a thin gold rule, then a tinted sub-bar carrying the report title + generated date.
+     Centered on every PDF/print output across the app. */
+  .print-header{
+    display:block!important;text-align:center!important;
+    margin:0 0 12px;padding:0 0 14px;
+    border-bottom:2.5px solid #5b2c9e!important;
+    page-break-after:avoid!important;break-after:avoid!important;
+    position:relative;
+  }
+  .print-header::before{
+    content:'🎓';
+    display:block!important;text-align:center!important;
+    font-size:30px;line-height:1;margin-bottom:4px;
+  }
+  .print-header::after{
+    content:'Generated ' attr(data-gen) ' · Confidential — For Internal Academic Use';
+    position:absolute;left:0;right:0;bottom:-15px;text-align:center!important;
+    font-family:'Segoe UI',Arial,sans-serif!important;
+    font-size:7.5px;color:#9aa6b5;letter-spacing:.3px;
+  }
+  .print-header > div{flex:none!important;}
+  .print-header h2{
+    font-size:17px;color:#2a1452;margin:0;font-weight:700;letter-spacing:.2px;
+  }
+  .print-header p{
+    font-family:'Segoe UI',Arial,sans-serif!important;
+    font-size:9.5px;color:#6a3fb5;margin-top:3px;font-weight:600;
+    letter-spacing:.3px;text-transform:uppercase;
+  }
+
+  /* Table card — refined card with soft header tint, gold accent corner */
+  .table-card{
+    border:1px solid #d8cdf0!important;
+    border-radius:3px!important;
+    box-shadow:none!important;
+    margin-bottom:16px!important;
+    padding:10px 16px 8px!important;
+    page-break-inside:auto!important;
+    break-inside:auto!important;
+    background:#fff!important;
+  }
+  .table-wrap{max-height:none!important;overflow:visible!important;overflow-x:visible!important;}
+
+  /* Merit List: if a category table is too long for one page, it will now flow
+     onto the next page (no wasted blank page) — but the category name + count
+     repeats at the top of every page it spans, via a title row inside <thead>.
+     The on-screen section heading is suppressed in print for this page since
+     the repeating thead row already carries that label (avoids a duplicate). */
+  #page-meritlist .table-head-title{display:none!important;}
+  #page-meritlist .print-title-row{
+    display:table-row!important;
+  }
+  #page-meritlist .print-title-row th{
+    background:#efe8f9!important;color:#5b2c9e!important;
+    font-size:10.5px!important;text-align:left!important;
+    padding:4px 12px!important;border:1px solid #c9b8e6!important;
+    text-transform:uppercase;letter-spacing:.4px;
+  }
+  /* Category-wise tables (General/SC/ST/OBC/EWS/PWD) are always small enough
+     to fit one page, so they never split. The "Overall Merit List" (all
+     students together) does NOT get this — it can be long enough that forcing
+     it to fit one page would blank out page 1 entirely, so it flows normally
+     and repeats its title row via .print-title-row if it ever needs 2 pages. */
+  #page-meritlist .category-table{
+    page-break-inside:avoid!important;
+    break-inside:avoid!important;
+  }
+
+  /* Core table rules */
+  table{
+    width:100%!important;
+    border-collapse:collapse!important;
+    table-layout:fixed!important;
+    page-break-inside:auto!important;
+    break-inside:auto!important;
+  }
+
+  /* thead repeats on every new page — critical */
+  thead{
+    display:table-header-group!important;
+    break-inside:avoid!important;
+    page-break-inside:avoid!important;
+  }
+  tbody{display:table-row-group!important;}
+
+  /* Each row must not break in the middle */
+  tr{
+    page-break-inside:avoid!important;
+    break-inside:avoid!important;
+    -webkit-column-break-inside:avoid!important;
+  }
+
+  /* Header row — deep plum-to-violet tint, crisp small-caps look */
+  th{
+    background:#efe8f9!important;
+    color:#3d1a6b!important;
+    border:1px solid #c9b8e6!important;
+    border-bottom:1.5px solid #5b2c9e!important;
+    font-family:'Segoe UI',Arial,sans-serif!important;
+    font-size:8.5px;
+    font-weight:700;
+    padding:4px 5px;
+    white-space:normal!important;
+    word-break:break-word!important;
+    overflow-wrap:break-word!important;
+    text-align:left!important;
+    line-height:1.2!important;
+    letter-spacing:.3px;
+    text-transform:uppercase;
+  }
+  td{
+    border:1px solid #e2d9f0!important;
+    font-size:9.5px;
+    padding:3.5px 5px;
+    white-space:normal!important;
+    word-break:break-word!important;
+    overflow-wrap:break-word!important;
+    vertical-align:middle!important;
+    line-height:1.25!important;
+    color:#26303d!important;
+    /* No max-width here — table-layout:fixed handles column widths */
+  }
+  td strong{color:#1a3a5c!important;}
+  td a[href^="tel:"],td a[href^="mailto:"]{color:#1a56db!important;text-decoration:underline!important;}
+
+  /* Soft alternating row tint — subtle lavender instead of flat grey */
+  tr:nth-child(even) td{background:#f8f5fd!important;}
+  tr:hover td{background:inherit!important;}
+
+  /* All Students tab: denser rows like the source PDF (no extra row height) */
+  #page-records table th,#page-records table td{padding:3px 5px!important;font-size:9px!important;}
+
+  /* Merit List tab: denser rows too, same treatment */
+  #page-meritlist table th,#page-meritlist table td{padding:3px 12px!important;font-size:10.5px!important;line-height:1.15!important;}
+  /* Auto layout: columns size to their own content (no forced wide gaps) —
+     matches the tight, no-slack look of the source data instead of stretched
+     fixed-percentage columns. */
+  #page-meritlist table{table-layout:auto!important;width:auto!important;min-width:70%!important;margin:0 auto!important;}
+  #page-meritlist table th,#page-meritlist table td{white-space:nowrap!important;width:auto!important;}
+  #page-meritlist table th:nth-child(2),#page-meritlist table td:nth-child(2),
+  #page-meritlist table th:nth-child(3),#page-meritlist table td:nth-child(3){white-space:normal!important;}
+  #page-meritlist table tbody td:nth-child(1),
+  #page-meritlist table thead tr:not(.print-title-row) th:nth-child(1){text-align:center!important;}
+  #page-meritlist table th:nth-child(4),#page-meritlist table td:nth-child(4),
+  #page-meritlist table th:nth-child(5),#page-meritlist table td:nth-child(5),
+  #page-meritlist table th:nth-child(6),#page-meritlist table td:nth-child(6),
+  #page-meritlist table th:nth-child(7),#page-meritlist table td:nth-child(7){text-align:center!important;}
+  #page-meritlist .cat-badge{padding:1px 5px!important;font-size:8px!important;}
+
+  /* Column widths for master list (11-col, no Roll No) landscape A4
+     #, Name, Father, Sem, Cat, DSC, GE, SEC, AEC, VAC, Phone */
+  col:nth-child(1),th:nth-child(1),td:nth-child(1){width:2.5%!important;}
+  col:nth-child(2),th:nth-child(2),td:nth-child(2){width:12%!important;}
+  col:nth-child(3),th:nth-child(3),td:nth-child(3){width:10%!important;}
+  col:nth-child(4),th:nth-child(4),td:nth-child(4){width:4%!important;}
+  col:nth-child(5),th:nth-child(5),td:nth-child(5){width:4.5%!important;}
+  col:nth-child(6),th:nth-child(6),td:nth-child(6){width:20%!important;}
+  col:nth-child(7),th:nth-child(7),td:nth-child(7){width:9%!important;}
+  col:nth-child(8),th:nth-child(8),td:nth-child(8){width:16%!important;}
+  col:nth-child(9),th:nth-child(9),td:nth-child(9){width:13%!important;}
+  col:nth-child(10),th:nth-child(10),td:nth-child(10){width:11%!important;}
+  col:nth-child(11),th:nth-child(11),td:nth-child(11){width:5%!important;}
+
+  /* All Students tab print table: back to fixed-percentage layout (proven reliable
+     for this many columns — auto-layout + nowrap squeezed Name/Father/Mother/Email
+     into multi-line wraps and blew the PDF up to 16 pages). Widths sized to content:
+     #, Name, Father, Mother, Form No., Program, Sem, Stream, Category, Phone, Email */
+  #page-records table{table-layout:fixed!important;width:100%!important;}
+  #page-records table th:nth-child(1),#page-records table td:nth-child(1){width:3%!important;text-align:center!important;}
+  #page-records table th:nth-child(2),#page-records table td:nth-child(2){width:13%!important;}
+  #page-records table th:nth-child(3),#page-records table td:nth-child(3){width:13%!important;}
+  #page-records table th:nth-child(4),#page-records table td:nth-child(4){width:13%!important;}
+  #page-records table th:nth-child(5),#page-records table td:nth-child(5){width:8%!important;text-align:center!important;}
+  #page-records table th:nth-child(6),#page-records table td:nth-child(6){width:6%!important;text-align:center!important;}
+  #page-records table th:nth-child(7),#page-records table td:nth-child(7){width:4%!important;text-align:center!important;}
+  #page-records table th:nth-child(8),#page-records table td:nth-child(8){width:7%!important;text-align:center!important;}
+  #page-records table th:nth-child(9),#page-records table td:nth-child(9){width:7%!important;text-align:center!important;}
+  #page-records table th:nth-child(10),#page-records table td:nth-child(10){width:9%!important;text-align:center!important;}
+  #page-records table th:nth-child(11),#page-records table td:nth-child(11){width:17%!important;}
+
+  /* Subject filter overrides (12-col: #,Name,Father,Sem,Cat,Role,DSC,GE,SEC,AEC,Phone,Action-hidden)
+     Action col is no-print so effectively 11 printable cols */
+  #sf-content th:nth-child(1),#sf-content td:nth-child(1){width:2.5%!important;}
+  #sf-content th:nth-child(2),#sf-content td:nth-child(2){width:12%!important;}
+  #sf-content th:nth-child(3),#sf-content td:nth-child(3){width:10%!important;}
+  #sf-content th:nth-child(4),#sf-content td:nth-child(4){width:4%!important;}
+  #sf-content th:nth-child(5),#sf-content td:nth-child(5){width:5%!important;}
+  #sf-content th:nth-child(6),#sf-content td:nth-child(6){width:8%!important;}
+  #sf-content th:nth-child(7),#sf-content td:nth-child(7){width:20%!important;}
+  #sf-content th:nth-child(8),#sf-content td:nth-child(8){width:8%!important;}
+  #sf-content th:nth-child(9),#sf-content td:nth-child(9){width:16%!important;}
+  #sf-content th:nth-child(10),#sf-content td:nth-child(10){width:14%!important;}
+  #sf-content th:nth-child(11),#sf-content td:nth-child(11){width:6.5%!important;}
+
+  /* Badges — slightly more refined pill shape for print */
+  .badge,.cat-badge{
+    font-family:'Segoe UI',Arial,sans-serif!important;
+    font-size:7px!important;padding:1.5px 5px!important;font-weight:700!important;
+    border-radius:8px!important;
+  }
+
+  /* Section footer note (grand totals etc.) — small caps, gold-toned */
+  #master-content > p, #catstats-content > p{
+    font-family:'Segoe UI',Arial,sans-serif!important;
+    font-size:9px!important;color:#8a6d1f!important;font-weight:700!important;
+    border-top:1px dashed #d8cdf0;padding-top:6px;margin-top:10px!important;
+  }
+
+  /* Page setup — A4 landscape with refined margins + running footer via @page margin boxes
+     (Chrome/Edge ignore @page content boxes, so we also add an explicit footer element below) */
+  @page{
+    size:A4 landscape;
+    margin:14mm 10mm 16mm 10mm;
+  }
+
+  /* Explicit footer band — repeats only once per print context visually via fixed position;
+     most browsers do not repeat normal-flow elements per page, so this acts as a closing
+     colophon after the last table rather than a true running footer. */
+  .print-footer{
+    display:block!important;
+    margin-top:14px;padding-top:8px;
+    border-top:1px solid #d8cdf0;
+    font-family:'Segoe UI',Arial,sans-serif!important;
+    font-size:7.5px;color:#9aa6b5;
+    text-align:center;letter-spacing:.4px;
+    page-break-inside:avoid!important;
+  }
+
+  /* Force section breaks BETWEEN different stream/program tables, not inside them.
+     NOTE: the master-list markup (generateMaster()) outputs flat siblings per group:
+     <h3> -> .print-header -> .master-print-block (table). There is no .table-card
+     wrapper here, so the old ".table-card + .print-header" rule never matched and
+     no break ever fired between sections. Target the real previous sibling instead. */
+  .master-print-block + h3{
+    page-break-before:always!important;
+    break-before:page!important;
+  }
+  /* Master List table (13 cols): #,Form No.,Name,Father,Sem,Cat,DSC Subjects,GE,SEC,AEC,VAC,12th%,Phone
+     DSC Subjects holds a long comma-separated list — table-layout:fixed was splitting
+     width EQUALLY across all 13 columns, crushing it into 5-6 wrapped lines and
+     ballooning row height (hence 9 pages for 34 students). Give it real room. */
+  .master-print-block table{table-layout:fixed!important;}
+  .master-print-block th:nth-child(1),.master-print-block td:nth-child(1){width:2%!important;text-align:center!important;}
+  .master-print-block th:nth-child(2),.master-print-block td:nth-child(2){width:6%!important;text-align:center!important;}
+  .master-print-block th:nth-child(3),.master-print-block td:nth-child(3){width:11%!important;}
+  .master-print-block th:nth-child(4),.master-print-block td:nth-child(4){width:11%!important;}
+  .master-print-block th:nth-child(5),.master-print-block td:nth-child(5){width:4%!important;text-align:center!important;}
+  .master-print-block th:nth-child(6),.master-print-block td:nth-child(6){width:5%!important;text-align:center!important;}
+  .master-print-block th:nth-child(7),.master-print-block td:nth-child(7){width:24%!important;}
+  .master-print-block th:nth-child(8),.master-print-block td:nth-child(8){width:7%!important;text-align:center!important;}
+  .master-print-block th:nth-child(9),.master-print-block td:nth-child(9){width:6%!important;text-align:center!important;}
+  .master-print-block th:nth-child(10),.master-print-block td:nth-child(10){width:6%!important;text-align:center!important;}
+  .master-print-block th:nth-child(11),.master-print-block td:nth-child(11){width:6%!important;text-align:center!important;}
+  .master-print-block th:nth-child(12),.master-print-block td:nth-child(12){width:5%!important;text-align:center!important;}
+  .master-print-block th:nth-child(13),.master-print-block td:nth-child(13){width:7%!important;text-align:center!important;}
+  h3{
+    font-family:'Segoe UI',Arial,sans-serif!important;
+  }
+}
+@media(max-width:640px){
+  .top-tabs{justify-content:flex-start;}
+  .tab-item{padding:11px 12px;font-size:12px;}
+  .header-title{font-size:18px;}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div style="font-size:36px;margin-bottom:8px;">🎓</div>
+      <div class="cn">Government Degree College<br>Nandasain, Chamoli</div>
+      <div class="sub">Uttarakhand • NEP 2020</div>
+    </div>
+    <div class="login-title">Admission Record System</div>
+    <div class="mode-tabs">
+      <button class="mode-tab active" id="tabOnline" onclick="switchLoginMode('online')">🌐 Online (Supabase)</button>
+      <button class="mode-tab" id="tabOffline" onclick="switchLoginMode('offline')">📴 Offline (Local)</button>
+    </div>
+    <div id="onlineFields">
+      <div class="fg"><label>Email</label><input type="email" id="loginEmail" placeholder="admin@college.edu"></div>
+      <div class="fg"><label>Password</label><input type="password" id="loginPass" placeholder="••••••••"></div>
+    </div>
+    <div id="offlineFields" style="display:none;">
+      <div class="fg"><label>Local Password</label><input type="password" id="localPass" placeholder="Enter local password"></div>
+      <div class="offline-note">Data sirf is device ke browser mein save hoga.<br>Pehli baar: koi bhi password set karo.</div>
+      <div style="text-align:center;margin-top:10px;">
+        <a href="javascript:void(0)" onclick="resetLocalPassword()" style="font-size:12px;color:var(--accent);text-decoration:underline;cursor:pointer;">🔑 Password bhool gaye? Reset karein</a>
+      </div>
+    </div>
+    <button class="btn-primary" id="loginBtn" onclick="doLogin()">Login</button>
+    <div id="loginErr"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="app-header">
+    <div class="header-topright">
+      <span class="sync-badge" id="syncBadge">📴 Offline</span>
+    </div>
+    <div class="header-cn">Government Degree College Nandasain, Chamoli</div>
+    <div class="header-title">📋 Admission Record Keeper</div>
+    <div class="header-sub">NEP 2020 — DSC / GE / SEC / AEC / VAC · Category · Credits · Humanities · Science · Commerce</div>
+  </div>
+
+  <div class="top-tabs" id="sidebar">
+    <div class="tab-item active" onclick="showPage('dashboard',this)"><span class="icon">📊</span>Dashboard</div>
+    <div class="tab-item" onclick="showPage('add-student',this)"><span class="icon">➕</span>Entry</div>
+    <div class="tab-item" onclick="showPage('records',this)"><span class="icon">📋</span>All Students</div>
+    <div class="tab-item" onclick="showPage('humanities',this)"><span class="icon">📚</span>Humanities</div>
+    <div class="tab-item" onclick="showPage('science',this)"><span class="icon">🔬</span>Science</div>
+    <div class="tab-item" onclick="showPage('commerce',this)"><span class="icon">💼</span>Commerce</div>
+    <div class="tab-item" onclick="showPage('catstats',this)"><span class="icon">📊</span>Category Stats</div>
+    <div class="tab-item" onclick="showPage('meritlist',this)"><span class="icon">🏅</span>Merit List</div>
+    <div class="tab-item" onclick="showPage('master',this)"><span class="icon">📜</span>Master List</div>
+    <div class="tab-item" onclick="showPage('teacher',this)"><span class="icon">👩‍🏫</span>Teacher-wise</div>
+    <div class="tab-item" onclick="showPage('subjectfilter',this)"><span class="icon">🔍</span>Subject Filter</div>
+    <div class="tab-item" onclick="showPage('settings',this)"><span class="icon">⚙️</span>Settings</div>
+  </div>
+
+  <div class="main-content">
+
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-title">Dashboard</div>
+      <div class="page-sub">Session 2026-27 — Admission Overview</div>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-num" id="stat-total">—</div><div class="stat-lbl">Total Students</div></div>
+        <div class="stat-card"><div class="stat-num" id="stat-arts">—</div><div class="stat-lbl">Humanities</div></div>
+        <div class="stat-card"><div class="stat-num" id="stat-sci">—</div><div class="stat-lbl">Science</div></div>
+        <div class="stat-card"><div class="stat-num" id="stat-com">—</div><div class="stat-lbl">Commerce</div></div>
+        <div class="stat-card"><div class="stat-num" id="stat-ug">—</div><div class="stat-lbl">UG Students</div></div>
+        <div class="stat-card"><div class="stat-num" id="stat-pg">—</div><div class="stat-lbl">PG Students</div></div>
+      </div>
+      <div class="table-card">
+        <div class="table-head"><div class="table-head-title">Recent Admissions (Last 10)</div></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Name</th><th>Program</th><th>Stream</th><th>Semester</th><th>Category</th></tr></thead>
+            <tbody id="recent-tbody"><tr><td colspan="5" class="empty-state"><div class="icon">📭</div><p>No admissions yet</p></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADD STUDENT -->
+    <div class="page" id="page-add-student">
+      <div class="page-title">New Admission</div>
+      <div class="page-sub">NEP 2020 — Student Enrollment Form</div>
+      <div class="form-card">
+        <div class="form-card-title">📋 Academic Details</div>
+        <div class="form-grid">
+          <div class="form-group"><label>Session *</label>
+            <select id="f-session"><option value="2026-27">2026-27</option><option value="2027-28">2027-28</option><option value="2028-29">2028-29</option><option value="2029-30">2029-30</option></select>
+          </div>
+          <div class="form-group"><label>Stream *</label>
+            <select id="f-stream" onchange="updatePrograms()">
+              <option value="">-- Select --</option><option>Humanities</option><option>Science</option><option>Commerce</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Program *</label><select id="f-program" onchange="updateSemesters();updateDSC()"><option value="">-- Select Stream First --</option></select></div>
+          <div class="form-group"><label>Semester *</label><select id="f-semester"><option value="">-- Select Program First --</option></select></div>
+        </div>
+      </div>
+      <div class="form-card">
+        <div class="form-card-title">👤 Personal Details</div>
+        <div class="form-grid">
+          <div class="form-group"><label>Student Name *</label><input type="text" id="f-name" placeholder="Full name"></div>
+          <div class="form-group"><label>Roll No</label><input type="text" id="f-rollno" placeholder="Roll / Enrollment number"></div>
+          <div class="form-group"><label>Father's Name</label><input type="text" id="f-father" placeholder="Father's name"></div>
+          <div class="form-group"><label>Mother's Name</label><input type="text" id="f-mother" placeholder="Mother's name"></div>
+          <div class="form-group"><label>Date of Birth</label><input type="date" id="f-dob"></div>
+          <div class="form-group"><label>Gender</label>
+            <select id="f-gender"><option value="">-- Select --</option><option>Male</option><option>Female</option><option>Other</option></select>
+          </div>
+          <div class="form-group"><label>Category</label>
+            <select id="f-category"><option value="">-- Select --</option><option>General</option><option>OBC</option><option>SC</option><option>ST</option><option>EWS</option><option>PWD</option></select>
+          </div>
+          <div class="form-group"><label>Phone</label><input type="tel" id="f-phone" placeholder="10-digit number"></div>
+          <div class="form-group"><label>Email</label><input type="email" id="f-email" placeholder="student@email.com"></div>
+        </div>
+        <div class="form-group" style="margin-top:12px;"><label>Address</label><textarea id="f-address" rows="2" placeholder="Village / Town, District"></textarea></div>
+      </div>
+      <div class="form-card">
+        <div class="form-card-title">📖 NEP 2020 Subjects + Credits</div>
+
+        <!-- PG notice -->
+        <div id="pg-notice" style="display:none;background:#e8f0fb;border:1.5px solid #b0c4de;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:#1a3a5c;font-weight:600;">
+          📘 PG Program — Sirf <strong>1 Major Subject</strong> hota hai (DSC only). GE / SEC / AEC / VAC nahi hota.
+        </div>
+
+        <!-- DSC checkboxes -->
+        <div class="form-group" style="margin-bottom:14px;">
+          <label id="dsc-label">DSC Subjects (Stream select karne ke baad)</label>
+          <div class="checkbox-group" id="dsc-group"><span style="color:var(--muted);font-size:12px;">Select stream first</span></div>
+        </div>
+
+        <!-- DSC Credits row -->
+        <div class="form-grid" style="margin-bottom:14px;" id="ug-dsc-credits">
+          <div class="form-group"><label>DSC-1 Credits</label><input type="number" id="f-cr-dsc1" min="1" max="10" value="4"></div>
+          <div class="form-group"><label>DSC-2 Credits</label><input type="number" id="f-cr-dsc2" min="1" max="10" value="4"></div>
+          <div class="form-group"><label>DSC-3 Credits</label><input type="number" id="f-cr-dsc3" min="1" max="10" value="4"></div>
+        </div>
+        <!-- PG Major Credits -->
+        <div class="form-grid" style="margin-bottom:14px;display:none;" id="pg-major-credits">
+          <div class="form-group"><label>Major Subject Credits</label><input type="number" id="f-cr-pg-major" min="1" max="20" value="16"></div>
+        </div>
+
+        <!-- GE (UG only) -->
+        <div id="ug-ge-row" class="form-grid" style="margin-bottom:14px;">
+          <div class="form-group"><label>GE (Generic Elective)</label>
+            <select id="f-ge"><option value="">-- Select DSC first --</option></select>
+            <div style="font-size:11px;color:var(--muted);margin-top:3px;">DSC select karne ke baad auto-fill hoga</div>
+          </div>
+          <div class="form-group"><label>GE Credits</label><input type="number" id="f-cr-ge" min="1" max="10" value="4"></div>
+        </div>
+
+        <!-- SEC / AEC / VAC (UG only) -->
+        <div id="ug-sec-aec-vac" class="form-grid">
+          <div class="form-group"><label>SEC Subject</label>
+            <select id="f-sec"><option value="">-- Select --</option></select>
+          </div>
+          <div class="form-group"><label>SEC Credits</label><input type="number" id="f-cr-sec" min="1" max="10" value="2"></div>
+          <div class="form-group"><label>AEC Subject</label>
+            <select id="f-aec"><option value="">-- Select --</option></select>
+          </div>
+          <div class="form-group"><label>AEC Credits</label><input type="number" id="f-cr-aec" min="1" max="10" value="2"></div>
+          <div class="form-group"><label>VAC Subject</label>
+            <select id="f-vac"><option value="">-- Select --</option></select>
+          </div>
+          <div class="form-group"><label>VAC Credits</label><input type="number" id="f-cr-vac" min="1" max="10" value="2"></div>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn-save" id="save-btn" onclick="saveStudent()">💾 Save Admission</button>
+        <button class="btn-reset" onclick="resetForm()">Reset Form</button>
+      </div>
+      <div class="msg" id="form-msg"></div>
+    </div>
+
+    <!-- ALL STUDENTS -->
+    <div class="page" id="page-records">
+      <div class="page-title">All Students</div>
+      <div class="page-sub">Complete admission records</div>
+      <div class="print-header"><div><h2>Government Degree College Nandasain</h2><p>Complete Admission Record · Session 2026-27</p></div></div>
+      <div class="table-card">
+        <div class="table-head">
+          <div class="table-head-title">Students List</div>
+          <div class="filters">
+            <input type="text" class="search-in" placeholder="Search name..." id="search-all" oninput="filterTable()">
+            <select class="filter-sel" id="filter-stream-all" onchange="filterTable()">
+              <option value="">All Streams</option><option>Humanities</option><option>Science</option><option>Commerce</option>
+            </select>
+            <select class="filter-sel" id="filter-prog-all" onchange="filterTable()">
+              <option value="">All Programs</option><option>B.A.</option><option>B.Sc.</option><option>B.Com</option><option>M.A.</option><option>M.Sc.</option><option>M.Com</option>
+            </select>
+            <select class="filter-sel" id="filter-cat-all" onchange="filterTable()">
+              <option value="">All Categories</option><option>General</option><option>OBC</option><option>SC</option><option>ST</option><option>EWS</option><option>PWD</option>
+            </select>
+            <button class="btn btn-print no-print" onclick="printWithTitle('Admission Record — All Students')">🖨 Print</button>
+            <button class="btn no-print" onclick="exportCSV()">📥 CSV</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table><thead><tr><th>#</th><th>Name</th><th>Father</th><th>Mother</th><th>Form No.</th><th>Program</th><th>Sem</th><th>Stream</th><th>Category</th><th>Phone</th><th>Email</th><th class="no-print">Action</th></tr></thead>
+          <tbody id="tbody-all"></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- HUMANITIES -->
+    <div class="page" id="page-humanities">
+      <div class="page-title">Humanities</div>
+      <div class="page-sub">B.A. (UG) and M.A. (PG) students</div>
+      <div class="stream-tabs">
+        <div class="stream-tab active" id="hum-ug-tab" onclick="switchStreamTab('humanities','ug',this)">🎓 UG — B.A.</div>
+        <div class="stream-tab" id="hum-pg-tab" onclick="switchStreamTab('humanities','pg',this)">📘 PG — M.A.</div>
+      </div>
+      <div id="hum-content"></div>
+    </div>
+
+    <!-- SCIENCE -->
+    <div class="page" id="page-science">
+      <div class="page-title">Science</div>
+      <div class="page-sub">B.Sc. (UG) and M.Sc. (PG) students</div>
+      <div class="stream-tabs">
+        <div class="stream-tab active" id="sci-ug-tab" onclick="switchStreamTab('science','ug',this)">🎓 UG — B.Sc.</div>
+        <div class="stream-tab" id="sci-pg-tab" onclick="switchStreamTab('science','pg',this)">📘 PG — M.Sc.</div>
+      </div>
+      <div id="sci-content"></div>
+    </div>
+
+    <!-- COMMERCE -->
+    <div class="page" id="page-commerce">
+      <div class="page-title">Commerce</div>
+      <div class="page-sub">B.Com (UG) and M.Com (PG) students</div>
+      <div class="stream-tabs">
+        <div class="stream-tab active" id="com-ug-tab" onclick="switchStreamTab('commerce','ug',this)">🎓 UG — B.Com</div>
+        <div class="stream-tab" id="com-pg-tab" onclick="switchStreamTab('commerce','pg',this)">📘 PG — M.Com</div>
+      </div>
+      <div id="com-content"></div>
+    </div>
+
+    <!-- CATEGORY STATS -->
+    <div class="page" id="page-catstats">
+      <div class="page-title">Category Stats</div>
+      <div class="page-sub">Stream-wise & Category-wise breakdown</div>
+      <div class="no-print" style="display:flex;gap:8px;margin-bottom:12px;">
+        <button class="btn btn-print" onclick="printWithTitle('Category Wise Statistical Report of Students')">🖨 Print</button>
+        <button class="btn" onclick="exportToDocs('catstats-content','category_stats')">📄 Docs</button>
+      </div>
+      <div class="print-header"><div><h2>Government Degree College Nandasain</h2><p>Category-wise Statistical Report · Session 2026-27</p></div></div>
+      <div id="catstats-content"></div>
+    </div>
+
+    <!-- MERIT LIST -->
+    <div class="page" id="page-meritlist">
+      <div class="page-title">Merit List</div>
+      <div class="page-sub">12th Percentage ke hisaab se — All Students &amp; Category-wise</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;" class="no-print">
+        <button class="btn btn-print" id="ml-tab-all" onclick="setMeritView('all')">👥 All Students Merit List</button>
+        <button class="btn" id="ml-tab-cat" onclick="setMeritView('category')">🏷 Category Wise Merit List</button>
+        <select class="filter-sel" id="ml-program" onchange="renderMeritList()">
+          <option value="">All Programs</option>
+          <option value="B.A.">B.A.</option><option value="M.A.">M.A.</option>
+          <option value="B.Sc.">B.Sc.</option><option value="M.Sc.">M.Sc.</option>
+          <option value="B.Com">B.Com</option><option value="M.Com">M.Com</option>
+        </select>
+        <button class="btn btn-print no-print" onclick="printWithTitle(meritView==='category' ? 'Category Wise Merit List' : 'Merit List — All Students')">🖨 Print</button>
+      </div>
+      <div class="print-header"><div><h2>Government Degree College Nandasain</h2><p id="ml-print-sub">Merit List &middot; Session 2026-27</p></div></div>
+      <div id="meritlist-content"></div>
+    </div>
+
+    <!-- MASTER LIST -->
+    <div class="page" id="page-master">
+      <div class="page-title">Master List</div>
+      <div class="page-sub">All streams combined</div>
+      <div class="no-print" style="display:flex;gap:8px;margin-bottom:12px;">
+        <button class="btn btn-print" onclick="printMaster()">🖨 Print Master</button>
+        <button class="btn" onclick="exportToDocs('master-content','master_list')">📄 Docs</button>
+        <button class="btn" onclick="exportCSV()">📥 CSV</button>
+      </div>
+      <div id="master-content"></div>
+    </div>
+
+    <!-- TEACHER WISE -->
+    <div class="page" id="page-teacher">
+      <div class="page-title">Teacher-wise List</div>
+      <div class="page-sub">Subject ke hisaab se students</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;" class="no-print">
+        <select class="filter-sel" id="teacherType" onchange="renderTeacher()">
+          <option value="dsc">DSC (Major)</option><option value="ge">GE</option><option value="sec">SEC</option><option value="aec">AEC</option><option value="vac">VAC</option>
+        </select>
+        <select class="filter-sel" id="teacherSubject" onchange="renderTeacher()"><option value="">-- Select Subject --</option></select>
+        <button class="btn btn-print no-print" onclick="printWithTitle('Teacher Wise Subject List')">🖨 Print</button>
+      </div>
+      <div id="teacher-content"></div>
+    </div>
+
+    <!-- SUBJECT FILTER -->
+    <div class="page" id="page-subjectfilter">
+      <div class="page-title">🔍 Subject Filter</div>
+      <div class="page-sub">Kisi bhi subject ko padhane wale ALL students — DSC + GE + SEC + AEC + VAC sab ek jagah</div>
+
+      <!-- Filter Controls -->
+      <div class="form-card" style="margin-bottom:14px;">
+        <div class="form-card-title">📌 Subject Select Karo</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Subject Name</label>
+            <select id="sf-subject" onchange="renderSubjectFilter()" style="font-size:14px;font-weight:600;">
+              <option value="">-- Pehle Subject Chuno --</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Program Filter</label>
+            <select id="sf-program" onchange="renderSubjectFilter()">
+              <option value="">All Programs</option>
+              <option>B.A.</option><option>B.Sc.</option><option>B.Com</option>
+              <option>M.A.</option><option>M.Sc.</option><option>M.Com</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Semester Filter</label>
+            <select id="sf-sem" onchange="renderSubjectFilter()">
+              <option value="">All Semesters</option>
+              <option>1</option><option>2</option><option>3</option>
+              <option>4</option><option>5</option><option>6</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Category Filter</label>
+            <select id="sf-cat" onchange="renderSubjectFilter()">
+              <option value="">All Categories</option>
+              <option>General</option><option>OBC</option><option>SC</option><option>ST</option><option>EWS</option><option>PWD</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Summary Badges - where this subject appears -->
+      <div id="sf-summary-row" style="display:none;margin-bottom:12px;">
+        <div style="font-size:13px;font-weight:700;color:var(--primary);margin-bottom:8px;">📊 Is subject ko kitne students ne liya:</div>
+        <div id="sf-badges" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+      </div>
+
+      <!-- Print Header -->
+      <div class="print-header" id="sf-print-header">
+        <div><h2>Government Degree College Nandasain</h2>
+        <p id="sf-print-sub">Subject Filter | Session 2026-27</p></div>
+      </div>
+
+      <!-- Results -->
+      <div id="sf-content">
+        <div class="empty-state"><div class="icon">🔍</div><p>Upar se subject select karo</p></div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="page" id="page-settings">
+      <div class="page-title">Settings</div>
+      <div class="page-sub">Data management & subject configuration</div>
+
+      <!-- EXCEL IMPORT -->
+      <div class="settings-section">
+        <h3>📊 Excel / CSV Import</h3>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">
+          Excel ya CSV file upload karo — system automatically columns detect karega aur jo data milega woh import kar lega. Jo column nahi hoga woh skip ho jaayega.
+        </p>
+        <!-- Column mapping guide -->
+        <div style="background:#f0f4ff;border-radius:8px;padding:12px;margin-bottom:12px;font-size:11px;color:#1a3a5c;">
+          <strong>📋 Supported Column Names (case-insensitive):</strong><br>
+          <span style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">
+            <span style="background:#fff;border:1px solid #c0cfe0;border-radius:4px;padding:2px 6px;">name / student name</span>
+            <span style="background:#fff;border:1px solid #c0cfe0;border-radius:4px;padding:2px 6px;">roll no / roll number</span>
+            <span style="background:#fff;border:1px solid #c0cfe0;border-radius:4px;padding:2px 6px;">form number</span>
+            <span style="background:#fff;border:1px solid #c0cfe0;border-radius:4px;padding:2px 6px;">xii percentage / 12th percentage</span>
+            <span style="background:#fff;border:1px solid #c0cfe0;border-radius:4px;padding:2px 6px;">father / father name</span>
+            <span style="background:#fff;border:1px solid #c0cfe0;border-radius:4px;padding:2px 6px;">mother / mother name</span>
+            <span style="background:#fff;border:1px solid #c0cfe0;border-radius:4px;padding:2px 6px;">stream</span>
+            <span style="background:#fff;border:1px solid #c0cfe0;border-radius:4px;padding:2px 6px;">program / class</span>
+            <span style="background:#fff;border:1px solid #c0cfe0;border-radius:4px;padding:2px 6px;">semester / sem</span>
+            <span style="background:#fff;border:1px solid #c0cfe0;border-radius:4px;padding:2px 6px;">category / cat</span>
+            <span style="background:#fff;border:1px solid #c0cfe0;border-radius:4px;padding:2px 6px;">gender</span>
+            <span style="background:#fff;border:1px solid #c0cfe0;border-radius:4px;padding:2px 6px;">phone / mobile</span>
+            <span style="background:#fff;border:1px solid #c0cfe0;border-radius:4px;padding:2px 6px;">email</span>
+            <span style="background:#fff;border:1px solid #c0cfe0;border-radius:4px;padding:2px 6px;">address</span>
+            <span style="background:#fff;border:1px solid #c0cfe0;border-radius:4px;padding:2px 6px;">dob / date of birth</span>
+            <span style="background:#fff;border:1px solid #c0cfe0;border-radius:4px;padding:2px 6px;">dsc1 / dsc-1 / major1</span>
+            <span style="background:#fff;border:1px solid #c0cfe0;border-radius:4px;padding:2px 6px;">dsc2 / dsc-2 / major2</span>
+            <span style="background:#fff;border:1px solid #c0cfe0;border-radius:4px;padding:2px 6px;">dsc3 / dsc-3 / major3</span>
+            <span style="background:#fff;border:1px solid #c0cfe0;border-radius:4px;padding:2px 6px;">ge</span>
+            <span style="background:#fff;border:1px solid #c0cfe0;border-radius:4px;padding:2px 6px;">sec</span>
+            <span style="background:#fff;border:1px solid #c0cfe0;border-radius:4px;padding:2px 6px;">aec</span>
+            <span style="background:#fff;border:1px solid #c0cfe0;border-radius:4px;padding:2px 6px;">vac</span>
+            <span style="background:#fff;border:1px solid #c0cfe0;border-radius:4px;padding:2px 6px;">session</span>
+          </span>
+        </div>
+
+        <!-- Default values for missing required fields -->
+        <div class="form-grid" style="margin-bottom:12px;">
+          <div class="form-group">
+            <label>Default Stream (agar Excel mein nahi hai)</label>
+            <select id="imp-def-stream">
+              <option value="Humanities">Humanities</option>
+              <option value="Science">Science</option>
+              <option value="Commerce">Commerce</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Default Program</label>
+            <select id="imp-def-program">
+              <option value="B.A.">B.A.</option><option value="B.Sc.">B.Sc.</option>
+              <option value="B.Com">B.Com</option><option value="M.A.">M.A.</option>
+              <option value="M.Sc.">M.Sc.</option><option value="M.Com">M.Com</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Default Semester</label>
+            <select id="imp-def-sem">
+              <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Default Session</label>
+            <select id="imp-def-session">
+              <option value="2026-27">2026-27</option><option value="2027-28">2027-28</option><option value="2028-29">2028-29</option><option value="2029-30">2029-30</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <button class="btn btn-print" onclick="document.getElementById('excelImportFile').click()">📂 Excel / CSV File Chuno</button>
+          <input type="file" id="excelImportFile" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleExcelImport(event)">
+          <span style="font-size:12px;color:var(--muted);">.xlsx, .xls, .csv supported</span>
+        </div>
+
+        <!-- Preview table -->
+        <div id="excel-preview" style="display:none;margin-top:14px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+            <div id="excel-preview-info" style="font-size:13px;font-weight:700;color:var(--primary);"></div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn btn-success" id="excel-import-btn" onclick="confirmExcelImport()">✅ Import Karo</button>
+              <button class="btn" onclick="cancelExcelImport()">✖ Cancel</button>
+            </div>
+          </div>
+          <div style="overflow-x:auto;max-height:300px;overflow-y:auto;border:1.5px solid var(--border);border-radius:8px;">
+            <table id="excel-preview-table" style="width:100%;border-collapse:collapse;font-size:11px;">
+              <thead id="excel-preview-head"></thead>
+              <tbody id="excel-preview-body"></tbody>
+            </table>
+          </div>
+        </div>
+        <div id="excel-msg" style="margin-top:8px;font-size:12px;font-weight:600;"></div>
+      </div>
+      <div class="settings-section">
+        <h3>📖 Subject Options (DSC / GE / SEC / AEC / VAC)</h3>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">Comma-separated list. Entry form mein yahi options dikhenge.</p>
+        <div class="form-grid">
+          <div class="form-group"><label>Humanities (DSC)</label><textarea id="opt-humanity" rows="3" placeholder="Hindi, English, History..."></textarea></div>
+          <div class="form-group"><label>Science (DSC)</label><textarea id="opt-science" rows="3" placeholder="Physics, Chemistry..."></textarea></div>
+          <div class="form-group"><label>Commerce (DSC)</label><textarea id="opt-commerce" rows="3" placeholder="Accountancy, Business Studies..."></textarea></div>
+          <div class="form-group"><label>SEC Options</label><textarea id="opt-sec" rows="3" placeholder="SEC-1: Communicative English..."></textarea></div>
+          <div class="form-group"><label>AEC Options</label><textarea id="opt-aec" rows="3" placeholder="AEC-1: English Communication..."></textarea></div>
+          <div class="form-group"><label>VAC Options</label><textarea id="opt-vac" rows="3" placeholder="VAC-1: Environmental Studies..."></textarea></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+          <button class="btn btn-print" onclick="saveSubjectOptions()">💾 Save Subject Options</button>
+          <button class="btn" onclick="resetSubjectOptions()">↩ Reset to Defaults</button>
+        </div>
+        <div id="subj-msg" style="margin-top:8px;font-size:12px;font-weight:600;"></div>
+      </div>
+      <div class="settings-section">
+        <h3>🔄 Backup & Restore</h3>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-print" onclick="doBackup()">⬇ Download Backup</button>
+          <button class="btn" onclick="document.getElementById('restoreFile').click()">⬆ Restore from Backup</button>
+          <input type="file" id="restoreFile" accept=".json" style="display:none" onchange="doRestore(event)">
+          <button class="btn btn-del" onclick="clearAll()">🗑 Clear All Data</button>
+        </div>
+        <div id="backup-msg" style="margin-top:8px;font-size:12px;font-weight:600;"></div>
+      </div>
+      <div class="settings-section" id="supabase-settings">
+        <h3>🌐 Supabase Sync Settings</h3>
+        <div class="form-grid">
+          <div class="form-group"><label>Supabase URL</label><input type="text" id="sb-url" placeholder="https://xxx.supabase.co"></div>
+          <div class="form-group"><label>Anon Key</label><input type="text" id="sb-key" placeholder="eyJ..."></div>
+          <div class="form-group"><label>College ID</label><input type="text" id="sb-college" placeholder="UUID"></div>
+        </div>
+        <div style="margin-top:10px;display:flex;gap:8px;">
+          <button class="btn btn-print" onclick="saveSbSettings()">Save Supabase Config</button>
+          <button class="btn" onclick="syncNow()">🔄 Sync Now</button>
+        </div>
+        <div id="sb-msg" style="margin-top:8px;font-size:12px;font-weight:600;"></div>
+      </div>
+      <div class="settings-section">
+        <h3>🔑 Change Local Password</h3>
+        <div class="form-grid">
+          <div class="form-group"><label>New Password</label><input type="password" id="newPass" placeholder="New password"></div>
+          <div class="form-group"><label>Confirm</label><input type="password" id="confirmPass" placeholder="Confirm password"></div>
+        </div>
+        <button class="btn btn-print" style="margin-top:10px;" onclick="changeLocalPass()">Save Password</button>
+        <div id="pass-msg" style="margin-top:8px;font-size:12px;font-weight:600;"></div>
+      </div>
+    </div>
+
+  </div><!-- /main-content -->
+</div><!-- /app -->
+
+<script>
+// ===== CONFIG =====
+const LS = {
+  STUDENTS: 'ark_v13_students',
+  OPTS: 'ark_v13_opts',
+  PASS: 'ark_v13_pass',
+  SB: 'ark_v13_sb',
+  MODE: 'ark_v13_mode'
+};
+
+const SUBJECT_DEFAULTS = {
+  humanity: ['Hindi','English','History','Political Science','Geography','Economics','Sociology','Philosophy','Sanskrit','Urdu','Education','Home Science','Music'],
+  science: ['Physics','Chemistry','Mathematics','Biology','Botany','Zoology','Computer Science','Statistics'],
+  commerce: ['Accountancy','Business Studies','Economics','Mathematics','Computer Applications','Entrepreneurship'],
+  sec: ['SEC-1: Communicative English','SEC-1: Communicative Hindi','SEC-2: Office Management','SEC-2: E-Commerce','SEC-2: Entrepreneurship Development','SEC-2: Tourism & Travel Management'],
+  aec: ['AEC-1: English Communication Skills','AEC-2: Advanced English Communication','AEC-1: Hindi Bhasha Kaushal','AEC-2: Hindi Rachna aur Prayog','AEC-1: Sanskrit Sambhashan','AEC-2: Sanskrit Gadya aur Padya'],
+  vac: ['VAC-1: Environmental Studies','VAC-2: Yoga & Wellness','VAC-2: Constitutional Values & Fundamental Duties','VAC-2: Digital Literacy & Cyber Safety','VAC-2: Gender Sensitization','VAC-2: Disaster Management']
+};
+
+function loadSubjectOptions() {
+  const s = localStorage.getItem(LS.OPTS);
+  const opts = s ? JSON.parse(s) : JSON.parse(JSON.stringify(SUBJECT_DEFAULTS));
+  // ensure all keys exist
+  Object.keys(SUBJECT_DEFAULTS).forEach(k => { if (!opts[k]) opts[k] = SUBJECT_DEFAULTS[k].slice(); });
+  return opts;
+}
+function saveSubjectOptionsToStorage(opts) {
+  localStorage.setItem(LS.OPTS, JSON.stringify(opts));
+}
+const DSC = {
+  Humanities:['Hindi','English','History','Political Science','Geography','Economics','Sociology','Philosophy','Sanskrit','Urdu','Education','Home Science','Music'],
+  Science:['Physics','Chemistry','Mathematics','Biology','Botany','Zoology','Computer Science','Statistics'],
+  Commerce:['Accountancy','Business Studies','Economics','Mathematics','Computer Applications','Entrepreneurship']
+};
+
+let subjectOptions = loadSubjectOptions();
+// Sync DSC from stored options (override defaults with user-saved options)
+DSC.Humanities = subjectOptions.humanity;
+DSC.Science = subjectOptions.science;
+DSC.Commerce = subjectOptions.commerce;
+
+const STREAM_MAP = {
+  humanities:{stream:'Humanities',ug:'B.A.',pg:'M.A.'},
+  science:{stream:'Science',ug:'B.Sc.',pg:'M.Sc.'},
+  commerce:{stream:'Commerce',ug:'B.Com',pg:'M.Com'}
+};
+
+let allStudents = [];
+let sbClient = null;
+let currentMode = 'offline'; // 'online' | 'offline'
+let sbConfig = {};
+const streamSubTabState = {humanities:'ug',science:'ug',commerce:'ug'};
+
+// ===== SUPABASE =====
+function initSupabase(url, key) {
+  try {
+    sbClient = supabase.createClient(url, key);
+    return true;
+  } catch(e) { return false; }
+}
+
+function loadSbConfig() {
+  const s = localStorage.getItem(LS.SB);
+  return s ? JSON.parse(s) : {url:'https://nxcsfufrtrumloybvsuu.supabase.co',key:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im54Y3NmdWZydHJ1bWxveWJ2c3V1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3NDk3MjcsImV4cCI6MjA5NzMyNTcyN30.xm_ZHy6ZpJ9_wJZEhmTbTBGDuFyGC7yZVSabv_MJ7WY',college:'de7c9249-14c3-4d3a-a054-e62ba0ae0bd7'};
+}
+
+// ===== LOGIN =====
+let loginMode = 'online';
+function switchLoginMode(mode) {
+  loginMode = mode;
+  document.getElementById('tabOnline').classList.toggle('active', mode==='online');
+  document.getElementById('tabOffline').classList.toggle('active', mode==='offline');
+  document.getElementById('onlineFields').style.display = mode==='online'?'':'none';
+  document.getElementById('offlineFields').style.display = mode==='offline'?'':'none';
+}
+
+function resetLocalPassword() {
+  var stored = localStorage.getItem(LS.PASS);
+  if (!stored) {
+    alert('Koi local password set hi nahi hai — seedha login karke naya password set kar sakte hain.');
+    return;
+  }
+  var ok = confirm('Kya aap apna local password reset karna chahte hain?\n\nAapka saara student data SAFE rahega — sirf password hatega, aur agli baar login karte waqt aap naya password set kar payenge.');
+  if (!ok) return;
+  localStorage.removeItem(LS.PASS);
+  var err = document.getElementById('loginErr');
+  if (err) { err.style.color = 'var(--success)'; err.textContent = '✅ Password reset ho gaya! Ab neeche koi bhi naya password type karke Login dabayein.'; }
+  var lp = document.getElementById('localPass');
+  if (lp) { lp.value = ''; lp.focus(); }
+}
+async function doLogin() {
+  const err = document.getElementById('loginErr');
+  const btn = document.getElementById('loginBtn');
+  err.textContent = '';
+  btn.disabled = true; btn.textContent = 'Logging in...';
+
+  if (loginMode === 'online') {
+    sbConfig = loadSbConfig();
+    if (!initSupabase(sbConfig.url, sbConfig.key)) {
+      err.textContent = 'Supabase init failed.'; btn.disabled=false; btn.textContent='Login'; return;
+    }
+    const email = document.getElementById('loginEmail').value.trim();
+    const pass = document.getElementById('loginPass').value;
+    const {error} = await sbClient.auth.signInWithPassword({email,password:pass});
+    if (error) { err.textContent = 'Login failed: '+error.message; btn.disabled=false; btn.textContent='Login'; return; }
+    currentMode = 'online';
+    localStorage.setItem(LS.MODE, 'online');
+    await showApp();
+  } else {
+    // Local login
+    const pass = document.getElementById('localPass').value;
+    const stored = localStorage.getItem(LS.PASS);
+    if (!stored) {
+      // First time — set password
+      if (!pass || pass.length < 4) { err.textContent = 'Kam se kam 4 characters ka password rakho.'; btn.disabled=false; btn.textContent='Login'; return; }
+      localStorage.setItem(LS.PASS, btoa(pass));
+    } else {
+      if (btoa(pass) !== stored) { err.textContent = 'Wrong password!'; btn.disabled=false; btn.textContent='Login'; return; }
+    }
+    currentMode = 'offline';
+    localStorage.setItem(LS.MODE, 'offline');
+    loadLocalStudents();
+    showAppUI();
+  }
+  btn.disabled=false; btn.textContent='Login';
+}
+
+async function checkSession() {
+  currentMode = 'offline';
+  localStorage.setItem(LS.MODE, 'offline');
+  loadLocalStudents();
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('syncBadge').className = 'sync-badge sync-offline';
+  document.getElementById('syncBadge').textContent = '📴 Local';
+  populateSubjectDropdowns();
+  renderDashboard();
+  renderTable();
+  fillTeacherSubjects();
+  generateCatStats();
+  generateMaster();
+  renderMeritList();
+  fillSubjectFilterDropdown();
+}
+
+async function showApp() {
+  if (currentMode === 'online') {
+    await loadOnlineStudents();
+    document.getElementById('syncBadge').className = 'sync-badge sync-online';
+    document.getElementById('syncBadge').textContent = '🌐 Online';
+  } else {
+    loadLocalStudents();
+    document.getElementById('syncBadge').className = 'sync-badge sync-offline';
+    document.getElementById('syncBadge').textContent = '📴 Offline';
+  }
+  showAppUI();
+}
+
+function showAppUI() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  populateSubjectDropdowns();
+  renderDashboard();
+  renderTable();
+  fillTeacherSubjects();
+  generateCatStats();
+  generateMaster();
+  renderMeritList();
+  fillSubjectFilterDropdown();
+}
+
+async function doLogout() {
+  if (currentMode==='online' && sbClient) await sbClient.auth.signOut();
+  localStorage.removeItem(LS.MODE);
+  document.getElementById('app').style.display='none';
+  document.getElementById('loginScreen').style.display='flex';
+}
+
+document.addEventListener('keydown', e=>{
+  if (e.key==='Enter' && document.getElementById('loginScreen').style.display!=='none') doLogin();
+});
+
+// ===== DATA LAYER =====
+const SEED_STUDENTS_GDC_NANDASAIN = [{"id": "s001", "name": "Vijay Dimri", "father": "", "program": "B.A.", "semester": 6, "stream": "Humanities", "category": "EWS", "phone": ""}, {"id": "s002", "name": "Radha Negi", "father": "", "program": "B.Com", "semester": 4, "stream": "Commerce", "category": "OBC", "phone": ""}, {"id": "s003", "name": "Pushpa Bhatt", "father": "", "program": "B.A.", "semester": 4, "stream": "Humanities", "category": "SC", "phone": ""}, {"id": "s004", "name": "Tara Chauhan", "father": "", "program": "B.A.", "semester": 4, "stream": "Humanities", "category": "General", "phone": ""}, {"id": "s005", "name": "Sanjay Mishra", "father": "", "program": "B.A.", "semester": 6, "stream": "Humanities", "category": "EWS", "phone": ""}, {"id": "s006", "name": "Kavita Kumar", "father": "", "program": "B.A.", "semester": 3, "stream": "Humanities", "category": "General", "phone": ""}, {"id": "s007", "name": "Anil Lal", "father": "", "program": "M.Sc.", "semester": 1, "stream": "Science", "category": "General", "phone": ""}, {"id": "s008", "name": "Vikas Mehta", "father": "", "program": "B.A.", "semester": 6, "stream": "Humanities", "category": "EWS", "phone": ""}, {"id": "s009", "name": "Kavita Rawat", "father": "", "program": "B.A.", "semester": 3, "stream": "Humanities", "category": "EWS", "phone": ""}, {"id": "s010", "name": "Lalit Dimri", "father": "", "program": "B.A.", "semester": 6, "stream": "Humanities", "category": "General", "phone": ""}, {"id": "s011", "name": "Kamal Negi", "father": "", "program": "B.Sc.", "semester": 1, "stream": "Science", "category": "General", "phone": ""}, {"id": "s012", "name": "Anil Bora", "father": "", "program": "B.A.", "semester": 5, "stream": "Humanities", "category": "EWS", "phone": ""}, {"id": "s013", "name": "Pushpa Singh", "father": "", "program": "B.A.", "semester": 2, "stream": "Humanities", "category": "EWS", "phone": ""}, {"id": "s014", "name": "Pawan Singh", "father": "", "program": "B.Com", "semester": 2, "stream": "Commerce", "category": "OBC", "phone": ""}, {"id": "s015", "name": "Usha Singh", "father": "", "program": "B.Sc.", "semester": 4, "stream": "Science", "category": "OBC", "phone": ""}, {"id": "s016", "name": "Priya Dimri", "father": "", "program": "M.A.", "semester": 4, "stream": "Humanities", "category": "ST", "phone": ""}, {"id": "s017", "name": "Vijay Kuriyal", "father": "", "program": "M.A.", "semester": 3, "stream": "Humanities", "category": "General", "phone": ""}, {"id": "s018", "name": "Ajay Sajwan", "father": "", "program": "B.Sc.", "semester": 2, "stream": "Science", "category": "General", "phone": ""}, {"id": "s019", "name": "Devendra Uniyal", "father": "", "program": "M.Sc.", "semester": 3, "stream": "Science", "category": "OBC", "phone": ""}, {"id": "s020", "name": "Rima Negi", "father": "", "program": "B.Sc.", "semester": 3, "stream": "Science", "category": "SC", "phone": ""}, {"id": "s021", "name": "Durga Das", "father": "", "program": "B.Com", "semester": 2, "stream": "Commerce", "category": "General", "phone": ""}, {"id": "s022", "name": "Kiran Adhikari", "father": "", "program": "B.A.", "semester": 1, "stream": "Humanities", "category": "OBC", "phone": ""}, {"id": "s023", "name": "Rajan Panwar", "father": "", "program": "M.Sc.", "semester": 2, "stream": "Science", "category": "General", "phone": ""}, {"id": "s024", "name": "Asha Sharma", "father": "", "program": "M.Sc.", "semester": 4, "stream": "Science", "category": "ST", "phone": ""}, {"id": "s025", "name": "Nisha Chauhan", "father": "", "program": "B.Sc.", "semester": 3, "stream": "Science", "category": "EWS", "phone": ""}, {"id": "s026", "name": "Kamal Mishra", "father": "", "program": "B.Sc.", "semester": 2, "stream": "Science", "category": "ST", "phone": ""}, {"id": "s027", "name": "Pradeep Gupta", "father": "", "program": "B.Sc.", "semester": 2, "stream": "Science", "category": "EWS", "phone": ""}, {"id": "s028", "name": "Sarla Negi", "father": "", "program": "B.Sc.", "semester": 1, "stream": "Science", "category": "OBC", "phone": ""}, {"id": "s029", "name": "Pradeep Verma", "father": "", "program": "B.Sc.", "semester": 1, "stream": "Science", "category": "General", "phone": ""}, {"id": "s030", "name": "Gopal Tiwari", "father": "", "program": "M.A.", "semester": 2, "stream": "Humanities", "category": "SC", "phone": ""}, {"id": "s031", "name": "Gopal Chauhan", "father": "", "program": "B.A.", "semester": 5, "stream": "Humanities", "category": "SC", "phone": ""}, {"id": "s032", "name": "Savita Sharma", "father": "", "program": "B.Com", "semester": 5, "stream": "Commerce", "category": "OBC", "phone": ""}, {"id": "s033", "name": "Lata Kandwal", "father": "", "program": "B.Sc.", "semester": 5, "stream": "Science", "category": "OBC", "phone": ""}, {"id": "s034", "name": "Hemlata Singh", "father": "", "program": "B.Com", "semester": 3, "stream": "Commerce", "category": "SC", "phone": ""}, {"id": "s035", "name": "Dinesh Mishra", "father": "", "program": "B.Sc.", "semester": 4, "stream": "Science", "category": "ST", "phone": ""}, {"id": "s036", "name": "Kamal Kumar", "father": "", "program": "M.A.", "semester": 3, "stream": "Humanities", "category": "EWS", "phone": ""}, {"id": "s037", "name": "Deepak Semwal", "father": "", "program": "B.A.", "semester": 2, "stream": "Humanities", "category": "General", "phone": ""}, {"id": "s038", "name": "Dinesh Das", "father": "", "program": "B.Sc.", "semester": 1, "stream": "Science", "category": "ST", "phone": ""}, {"id": "s039", "name": "Vikas Kuriyal", "father": "", "program": "B.Sc.", "semester": 2, "stream": "Science", "category": "General", "phone": ""}, {"id": "s040", "name": "Radha Rawat", "father": "", "program": "M.A.", "semester": 3, "stream": "Humanities", "category": "ST", "phone": ""}, {"id": "s041", "name": "Seeta Mehta", "father": "", "program": "B.Sc.", "semester": 3, "stream": "Science", "category": "OBC", "phone": ""}, {"id": "s042", "name": "Radha Singh", "father": "", "program": "M.A.", "semester": 3, "stream": "Humanities", "category": "General", "phone": ""}, {"id": "s043", "name": "Bharat Panwar", "father": "", "program": "B.A.", "semester": 1, "stream": "Humanities", "category": "General", "phone": ""}, {"id": "s044", "name": "Renu Thakur", "father": "", "program": "B.A.", "semester": 3, "stream": "Humanities", "category": "ST", "phone": ""}, {"id": "s045", "name": "Ramesh Dimri", "father": "", "program": "B.A.", "semester": 5, "stream": "Humanities", "category": "General", "phone": ""}, {"id": "s046", "name": "Renu Panwar", "father": "", "program": "M.Sc.", "semester": 4, "stream": "Science", "category": "General", "phone": ""}, {"id": "s047", "name": "Kamla Kandwal", "father": "", "program": "B.Sc.", "semester": 6, "stream": "Science", "category": "General", "phone": ""}, {"id": "s048", "name": "Mala Das", "father": "", "program": "B.Com", "semester": 2, "stream": "Commerce", "category": "OBC", "phone": ""}, {"id": "s049", "name": "Shanta Tiwari", "father": "", "program": "B.Sc.", "semester": 4, "stream": "Science", "category": "General", "phone": ""}, {"id": "s050", "name": "Ganesh Negi", "father": "", "program": "B.A.", "semester": 6, "stream": "Humanities", "category": "General", "phone": ""}, {"id": "s051", "name": "Bharat Joshi", "father": "", "program": "B.Sc.", "semester": 1, "stream": "Science", "category": "OBC", "phone": ""}, {"id": "s052", "name": "Rakesh Negi", "father": "", "program": "B.Com", "semester": 5, "stream": "Commerce", "category": "EWS", "phone": ""}, {"id": "s053", "name": "Renu Gusain", "father": "", "program": "B.Com", "semester": 5, "stream": "Commerce", "category": "EWS", "phone": ""}, {"id": "s054", "name": "Anil Thakur", "father": "", "program": "B.A.", "semester": 1, "stream": "Humanities", "category": "EWS", "phone": ""}, {"id": "s055", "name": "Usha Gusain", "father": "", "program": "B.A.", "semester": 3, "stream": "Humanities", "category": "OBC", "phone": ""}, {"id": "s056", "name": "Mahesh Kumar", "father": "", "program": "M.A.", "semester": 1, "stream": "Humanities", "category": "General", "phone": ""}, {"id": "s057", "name": "Priya Pant", "father": "", "program": "B.Sc.", "semester": 3, "stream": "Science", "category": "General", "phone": ""}, {"id": "s058", "name": "Ajay Kumar", "father": "", "program": "B.A.", "semester": 4, "stream": "Humanities", "category": "ST", "phone": ""}, {"id": "s059", "name": "Kiran Dimri", "father": "", "program": "B.A.", "semester": 4, "stream": "Humanities", "category": "OBC", "phone": ""}, {"id": "s060", "name": "Hemlata Bhatt", "father": "", "program": "B.A.", "semester": 5, "stream": "Humanities", "category": "OBC", "phone": ""}, {"id": "s061", "name": "Vikas Singh", "father": "", "program": "B.A.", "semester": 5, "stream": "Humanities", "category": "General", "phone": ""}, {"id": "s062", "name": "Girish Rawat", "father": "", "program": "B.A.", "semester": 5, "stream": "Humanities", "category": "General", "phone": ""}, {"id": "s063", "name": "Vimla Singh", "father": "", "program": "B.Com", "semester": 6, "stream": "Commerce", "category": "EWS", "phone": ""}, {"id": "s064", "name": "Rohit Singh", "father": "", "program": "B.A.", "semester": 2, "stream": "Humanities", "category": "OBC", "phone": ""}, {"id": "s065", "name": "Sanjay Rawat", "father": "", "program": "M.A.", "semester": 4, "stream": "Humanities", "category": "EWS", "phone": ""}, {"id": "s066", "name": "Rima Lal", "father": "", "program": "B.A.", "semester": 4, "stream": "Humanities", "category": "General", "phone": ""}, {"id": "s067", "name": "Usha Mishra", "father": "", "program": "M.Com", "semester": 2, "stream": "Commerce", "category": "General", "phone": ""}, {"id": "s068", "name": "Rekha Mehta", "father": "", "program": "B.A.", "semester": 4, "stream": "Humanities", "category": "SC", "phone": ""}, {"id": "s069", "name": "Asha Rana", "father": "", "program": "B.Com", "semester": 1, "stream": "Commerce", "category": "OBC", "phone": ""}, {"id": "s070", "name": "Ashok Lal", "father": "", "program": "B.Sc.", "semester": 2, "stream": "Science", "category": "General", "phone": ""}, {"id": "s071", "name": "Sunita Singh", "father": "", "program": "B.A.", "semester": 3, "stream": "Humanities", "category": "General", "phone": ""}, {"id": "s072", "name": "Amit Joshi", "father": "", "program": "B.A.", "semester": 6, "stream": "Humanities", "category": "ST", "phone": ""}, {"id": "s073", "name": "Rima Verma", "father": "", "program": "B.A.", "semester": 2, "stream": "Humanities", "category": "SC", "phone": ""}, {"id": "s074", "name": "Hemlata Rana", "father": "", "program": "B.Com", "semester": 4, "stream": "Commerce", "category": "ST", "phone": ""}, {"id": "s075", "name": "Meena Negi", "father": "", "program": "B.A.", "semester": 3, "stream": "Humanities", "category": "ST", "phone": ""}, {"id": "s076", "name": "Kiran Verma", "father": "", "program": "B.A.", "semester": 4, "stream": "Humanities", "category": "OBC", "phone": ""}, {"id": "s077", "name": "Reeta Rana", "father": "", "program": "B.A.", "semester": 4, "stream": "Humanities", "category": "General", "phone": ""}, {"id": "s078", "name": "Usha Rawat", "father": "", "program": "B.Sc.", "semester": 1, "stream": "Science", "category": "General", "phone": ""}, {"id": "s079", "name": "Radha Kuriyal", "father": "", "program": "B.Com", "semester": 2, "stream": "Commerce", "category": "SC", "phone": ""}, {"id": "s080", "name": "Asha Thakur", "father": "", "program": "M.Com", "semester": 4, "stream": "Commerce", "category": "SC", "phone": ""}, {"id": "s081", "name": "Sanju Kandwal", "father": "", "program": "B.Com", "semester": 3, "stream": "Commerce", "category": "General", "phone": ""}, {"id": "s082", "name": "Dinesh Panwar", "father": "", "program": "B.Sc.", "semester": 1, "stream": "Science", "category": "OBC", "phone": ""}, {"id": "s083", "name": "Mala Sharma", "father": "", "program": "B.A.", "semester": 5, "stream": "Humanities", "category": "General", "phone": ""}, {"id": "s084", "name": "Priya Adhikari", "father": "", "program": "B.A.", "semester": 5, "stream": "Humanities", "category": "SC", "phone": ""}, {"id": "s085", "name": "Harish Adhikari", "father": "", "program": "B.Com", "semester": 2, "stream": "Commerce", "category": "OBC", "phone": ""}, {"id": "s086", "name": "Ramesh Bisht", "father": "", "program": "M.Com", "semester": 1, "stream": "Commerce", "category": "SC", "phone": ""}, {"id": "s087", "name": "Harish Chauhan", "father": "", "program": "B.A.", "semester": 1, "stream": "Humanities", "category": "SC", "phone": ""}, {"id": "s088", "name": "Naresh Singh", "father": "", "program": "B.Com", "semester": 5, "stream": "Commerce", "category": "SC", "phone": ""}, {"id": "s089", "name": "Vikram Mehta", "father": "", "program": "M.A.", "semester": 4, "stream": "Humanities", "category": "EWS", "phone": ""}, {"id": "s090", "name": "Vikas Tiwari", "father": "", "program": "B.Sc.", "semester": 3, "stream": "Science", "category": "General", "phone": ""}, {"id": "s091", "name": "Savita Bisht", "father": "", "program": "M.A.", "semester": 3, "stream": "Humanities", "category": "General", "phone": ""}, {"id": "s092", "name": "Nisha Mehta", "father": "", "program": "M.Sc.", "semester": 4, "stream": "Science", "category": "General", "phone": ""}, {"id": "s093", "name": "Mahesh Bisht", "father": "", "program": "B.A.", "semester": 6, "stream": "Humanities", "category": "General", "phone": ""}, {"id": "s094", "name": "Kamla Chauhan", "father": "", "program": "B.Com", "semester": 2, "stream": "Commerce", "category": "General", "phone": ""}, {"id": "s095", "name": "Radha Uniyal", "father": "", "program": "B.Sc.", "semester": 6, "stream": "Science", "category": "OBC", "phone": ""}, {"id": "s096", "name": "Kavita Dimri", "father": "", "program": "B.A.", "semester": 4, "stream": "Humanities", "category": "General", "phone": ""}, {"id": "s097", "name": "Meena Adhikari", "father": "", "program": "B.A.", "semester": 6, "stream": "Humanities", "category": "General", "phone": ""}, {"id": "s098", "name": "Lokesh Adhikari", "father": "", "program": "B.Sc.", "semester": 2, "stream": "Science", "category": "OBC", "phone": ""}, {"id": "s099", "name": "Rima Panwar", "father": "", "program": "B.A.", "semester": 4, "stream": "Humanities", "category": "General", "phone": ""}, {"id": "s100", "name": "Hemlata Dimri", "father": "", "program": "M.Com", "semester": 4, "stream": "Commerce", "category": "ST", "phone": ""}, {"id": "s101", "name": "Sarita", "father": "Rajendra", "program": "B.A.", "semester": 1, "stream": "Humanities", "category": "OBC", "phone": "8808982226"}, {"id": "s102", "name": "Reeta", "father": "Ramesh", "program": "B.A.", "semester": 1, "stream": "Humanities", "category": "SC", "phone": "8808982226"}, {"id": "s103", "name": "Amar Chandra Vishwakarma", "father": "Rajendra Kumar Vishwakarma", "program": "B.A.", "semester": 1, "stream": "Humanities", "category": "OBC", "phone": "8808982226"}];
+
+function loadLocalStudents() {
+  const s = localStorage.getItem(LS.STUDENTS);
+  if (s) {
+    allStudents = JSON.parse(s);
+  } else {
+    allStudents = SEED_STUDENTS_GDC_NANDASAIN;
+    saveLocalStudents();
+  }
+}
+
+function saveLocalStudents() {
+  localStorage.setItem(LS.STUDENTS, JSON.stringify(allStudents));
+}
+
+async function loadOnlineStudents() {
+  const {data,error} = await sbClient.from('students').select('*').eq('college_id',sbConfig.college).order('created_at',{ascending:false});
+  if (!error) allStudents = (data||[]).map(mapOnlineToLocal);
+  else { console.warn('Supabase load failed, falling back to local'); loadLocalStudents(); }
+}
+
+function mapOnlineToLocal(s) {
+  return {
+    id: s.id, session: s.session, stream: s.stream, program: s.program,
+    semester: s.semester, roll_no: s.roll_no||'', name: s.name,
+    father: s.father_name||'', mother: s.mother_name||'',
+    dob: s.dob||'', gender: s.gender||'', category: s.category||'',
+    phone: s.phone||'', email: s.email||'', address: s.address||'',
+    dsc: s.dsc_subjects||[], ge: s.ge_subject||'', sec: s.sec_subject||'',
+    aec: s.aec_subject||'', vac: s.vac_subject||'',
+    created_at: s.created_at
+  };
+}
+
+// ===== DASHBOARD =====
+function renderDashboard() {
+  const s = allStudents;
+  document.getElementById('stat-total').textContent = s.length;
+  document.getElementById('stat-arts').textContent = s.filter(x=>x.stream==='Humanities').length;
+  document.getElementById('stat-sci').textContent = s.filter(x=>x.stream==='Science').length;
+  document.getElementById('stat-com').textContent = s.filter(x=>x.stream==='Commerce').length;
+  document.getElementById('stat-ug').textContent = s.filter(x=>['B.A.','B.Sc.','B.Com'].includes(x.program)).length;
+  document.getElementById('stat-pg').textContent = s.filter(x=>['M.A.','M.Sc.','M.Com'].includes(x.program)).length;
+
+  const recent = s.slice(0,10);
+  const tbody = document.getElementById('recent-tbody');
+  if (!recent.length) { tbody.innerHTML='<tr><td colspan="5" class="empty-state"><div class="icon">📭</div><p>No admissions yet</p></td></tr>'; return; }
+  tbody.innerHTML = recent.map(st=>{
+    const sc = st.stream==='Humanities'?'arts':st.stream==='Science'?'sci':'com';
+    return `<tr><td><strong>${esc(st.name)}</strong></td><td>${st.program||'—'}</td>
+      <td><span class="badge badge-${sc}">${st.stream}</span></td>
+      <td>Sem ${st.semester}</td><td>${st.category||'—'}</td></tr>`;
+  }).join('');
+}
+
+// ===== ALL STUDENTS TABLE =====
+function renderTable() {
+  const search = (document.getElementById('search-all')||{}).value?.toLowerCase()||'';
+  const stream = (document.getElementById('filter-stream-all')||{}).value||'';
+  const prog = (document.getElementById('filter-prog-all')||{}).value||'';
+  const cat = (document.getElementById('filter-cat-all')||{}).value||'';
+  let rows = allStudents.filter(s=>
+    (!search || s.name.toLowerCase().includes(search)) &&
+    (!stream || s.stream===stream) && (!prog || s.program===prog) && (!cat || s.category===cat)
+  );
+  const tbody = document.getElementById('tbody-all');
+  if (!rows.length) { tbody.innerHTML='<tr><td colspan="12" class="empty-state"><div class="icon">📭</div><p>No students found</p></td></tr>'; return; }
+  tbody.innerHTML = rows.map((s,i)=>{
+    const sc = s.stream==='Humanities'?'arts':s.stream==='Science'?'sci':'com';
+    const pc = ['M.A.','M.Sc.','M.Com'].includes(s.program)?'pg':'ug';
+    return `<tr><td>${i+1}</td>
+      <td><strong>${esc(s.name)}</strong></td><td>${esc(s.father||'—')}</td>
+      <td>${esc(s.mother||'—')}</td>
+      <td>${esc(s.form_number||'—')}</td>
+      <td><span class="badge badge-${pc}">${s.program}</span></td>
+      <td>${s.semester}</td>
+      <td><span class="badge badge-${sc}">${s.stream}</span></td>
+      <td>${s.category||'—'}</td><td>${telLink(s.phone)}</td>
+      <td>${mailLink(s.email)}</td>
+      <td class="no-print"><button class="btn btn-del" onclick="deleteStudent('${s.id}')">🗑</button></td></tr>`;
+  }).join('');
+}
+function filterTable() { renderTable(); }
+
+// ===== STREAM TABLES =====
+function switchStreamTab(streamKey, level, el) {
+  streamSubTabState[streamKey] = level;
+  const prefix = streamKey.substring(0,3);
+  ['ug','pg'].forEach(lv=>{
+    const tab = document.getElementById(`${prefix}-${lv}-tab`);
+    if(tab) tab.classList.toggle('active', lv===level);
+  });
+  renderStreamContent(streamKey);
+}
+
+function renderStreamContent(streamKey) {
+  const map = STREAM_MAP[streamKey];
+  const level = streamSubTabState[streamKey];
+  const program = map[level];
+  const prefix = streamKey.substring(0,3);
+  const contentId = `${prefix}-content`;
+
+  const rows = allStudents.filter(s=>s.stream===map.stream && s.program===program);
+  const isUG = level==='ug';
+
+  let html = `<div class="sum-cards">
+    <div class="sum-card"><div class="num">${allStudents.filter(s=>s.stream===map.stream).length}</div><div class="lbl">Total ${map.stream}</div></div>
+    <div class="sum-card"><div class="num">${allStudents.filter(s=>s.stream===map.stream&&s.program===map.ug).length}</div><div class="lbl">UG</div></div>
+    <div class="sum-card"><div class="num">${allStudents.filter(s=>s.stream===map.stream&&s.program===map.pg).length}</div><div class="lbl">PG</div></div>
+  </div>`;
+
+  html += `<div class="print-header"><div><h2>Government Degree College Nandasain</h2><p>${program} Students &middot; Session 2026-27</p></div></div>`;
+  html += `<div class="table-card"><div class="table-head">
+    <div class="table-head-title">${program} Students (${rows.length})</div>
+    <div class="filters no-print">
+      <select class="filter-sel" id="f-sem-${streamKey}" onchange="renderStreamContent('${streamKey}')">
+        <option value="">All Semesters</option>
+        ${(isUG?[1,2,3,4,5,6]:[1,2,3,4]).map(n=>`<option>${n}</option>`).join('')}
+      </select>
+      <select class="filter-sel" id="f-cat-${streamKey}" onchange="renderStreamContent('${streamKey}')">
+        <option value="">All Categories</option><option>General</option><option>OBC</option><option>SC</option><option>ST</option><option>EWS</option><option>PWD</option>
+      </select>
+      <button class="btn btn-print" onclick="printWithTitle('${program} Students List')">🖨 Print</button>
+    </div>
+  </div>
+  <div class="table-wrap"><table><thead><tr>
+    <th>#</th><th>Name</th><th>Father</th><th>Sem</th><th>Category</th>
+    ${isUG?'<th>DSC Subjects</th><th>GE</th><th>SEC</th><th>AEC</th><th>VAC</th>':''}
+    <th>Phone</th><th class="no-print">Action</th>
+  </tr></thead><tbody>`;
+
+  const semF = (document.getElementById(`f-sem-${streamKey}`)||{}).value||'';
+  const catF = (document.getElementById(`f-cat-${streamKey}`)||{}).value||'';
+  let filtered = rows.filter(s=>(!semF||String(s.semester)===semF)&&(!catF||s.category===catF));
+
+  if (!filtered.length) {
+    html += `<tr><td colspan="${isUG?12:7}" class="empty-state"><div class="icon">📭</div><p>No students found</p></td></tr>`;
+  } else {
+    html += filtered.map((s,i)=>`<tr>
+      <td>${i+1}</td><td><strong>${esc(s.name)}</strong></td>
+      <td>${esc(s.father||'—')}</td><td>Sem ${s.semester}</td><td>${s.category||'—'}</td>
+      ${isUG?`<td>${(s.dsc||[]).join(', ')||'—'}</td><td>${esc(s.ge||'—')}</td><td>${esc(s.sec||'—')}</td><td>${esc(s.aec||'—')}</td><td>${esc(s.vac||'—')}</td>`:''}
+      <td>${telLink(s.phone)}</td>
+      <td class="no-print"><button class="btn btn-del" onclick="deleteStudent('${s.id}')">🗑</button></td>
+    </tr>`).join('');
+  }
+  html += `</tbody></table></div></div>`;
+  document.getElementById(contentId).innerHTML = html;
+}
+
+// ===== CATEGORY STATS =====
+function generateCatStats() {
+  const cats = ['General','OBC','SC','ST','EWS','PWD'];
+  let html = '';
+  ['Humanities','Science','Commerce'].forEach(stream=>{
+    ['B.A.','M.A.','B.Sc.','M.Sc.','B.Com','M.Com'].forEach(prog=>{
+      if (!prog.includes(stream==='Humanities'?'A':stream==='Science'?'Sc':'Co')) return;
+      const list = allStudents.filter(s=>s.stream===stream&&s.program===prog);
+      if (!list.length) return;
+      const sc = stream==='Humanities'?'hum':stream==='Science'?'sci':'com';
+      const counts = {};
+      cats.forEach(c=>{counts[c]={total:0,Male:0,Female:0,Other:0};});
+      list.forEach(s=>{
+        const c=s.category||'General';
+        const g=normalizeGender(s.gender);
+        if(counts[c]){counts[c].total++;if(counts[c][g]!==undefined)counts[c][g]++;}
+      });
+      html += `<div class="table-card" style="margin-bottom:14px;">
+        <div class="table-head"><div class="table-head-title" style="color:var(--${sc});">${stream} — ${prog} (${list.length})</div></div>
+        <div class="table-wrap"><table><thead><tr><th>Category</th><th>Total</th><th>Male</th><th>Female</th><th>Other</th></tr></thead><tbody>
+        ${cats.map(c=>`<tr><td><span class="cat-badge cat-${c==='General'?'GEN':c}">${c}</span></td>
+          <td>${counts[c].total}</td><td>${counts[c].Male}</td><td>${counts[c].Female}</td><td>${counts[c].Other}</td></tr>`).join('')}
+        </tbody></table></div></div>`;
+    });
+  });
+  document.getElementById('catstats-content').innerHTML = html || '<div class="empty-state"><div class="icon">📭</div><p>No data yet</p></div>';
+}
+
+// ===== MASTER LIST =====
+let meritView = 'all';
+function setMeritView(v) {
+  meritView = v;
+  const btnAll = document.getElementById('ml-tab-all');
+  const btnCat = document.getElementById('ml-tab-cat');
+  if (btnAll) btnAll.classList.toggle('btn-print', v === 'all');
+  if (btnCat) btnCat.classList.toggle('btn-print', v === 'category');
+  renderMeritList();
+}
+function renderMeritList() {
+  const view = meritView;
+  const progFilter = (document.getElementById('ml-program')||{}).value || '';
+  const subEl = document.getElementById('ml-print-sub');
+
+  let list = allStudents.slice();
+  if (progFilter) list = list.filter(s => s.program === progFilter);
+
+  const withPct = list.filter(s => s.percentage_12th !== undefined && s.percentage_12th !== null && s.percentage_12th !== '' && !isNaN(parseFloat(s.percentage_12th)));
+  const withoutPct = list.filter(s => !(s.percentage_12th !== undefined && s.percentage_12th !== null && s.percentage_12th !== '' && !isNaN(parseFloat(s.percentage_12th))));
+
+  if (!list.length) {
+    document.getElementById('meritlist-content').innerHTML = '<div class="empty-state"><div class="icon">📭</div><p>No students yet</p></div>';
+    return;
+  }
+
+  function meritTable(rows, title, colorVar, avoidBreak) {
+    if (!rows.length) return '';
+    const sorted = rows.slice().sort((a,b) => parseFloat(b.percentage_12th) - parseFloat(a.percentage_12th));
+    return `<div class="table-card ${avoidBreak?'category-table':''}" style="margin-bottom:14px;">
+      <div class="table-head"><div class="table-head-title" ${colorVar?`style="color:var(--${colorVar});"`:''}>${title} (${sorted.length})</div></div>
+      <div class="table-wrap"><table><thead>
+      <tr class="print-title-row"><th colspan="7">${title} (${sorted.length})</th></tr>
+      <tr><th>Rank</th><th>Name</th><th>Father</th><th>Program</th><th>Category</th><th>12th %</th><th>Phone</th></tr></thead><tbody>
+      ${sorted.map((s,i)=>`<tr><td><strong>${i+1}</strong></td><td>${esc(s.name)}</td><td>${esc(s.father||'—')}</td>
+        <td>${esc(s.program||'—')}</td><td><span class="cat-badge cat-${(s.category==='General'?'GEN':s.category)||'GEN'}">${s.category||'General'}</span></td>
+        <td><strong>${esc(s.percentage_12th)}%</strong></td><td>${telLink(s.phone)}</td></tr>`).join('')}
+      </tbody></table></div></div>`;
+  }
+
+  let html = '';
+  if (view === 'all') {
+    if (subEl) subEl.textContent = `Merit List — All Students (Overall)${progFilter?' · '+progFilter:''}`;
+    html += meritTable(withPct, 'Overall Merit List', null, false);
+  } else {
+    if (subEl) subEl.textContent = `Merit List — Category-wise${progFilter?' · '+progFilter:''}`;
+    ['General','OBC','SC','ST','EWS','PWD'].forEach(cat => {
+      const catRows = withPct.filter(s => (s.category||'General') === cat);
+      html += meritTable(catRows, cat + ' Category', null, true);
+    });
+  }
+
+  if (withoutPct.length) {
+    html += `<div style="font-size:12px;color:var(--muted);background:#fff3cd;border-radius:8px;padding:10px 14px;margin-top:8px;">
+      ⚠ ${withoutPct.length} student(s) ka 12th percentage data nahi hai, isliye merit list mein shamil nahi kiye gaye: ${withoutPct.map(s=>esc(s.name)).join(', ')}
+    </div>`;
+  }
+
+  document.getElementById('meritlist-content').innerHTML = html || '<div class="empty-state"><div class="icon">📭</div><p>Koi 12th percentage data nahi mila</p></div>';
+}
+function generateMaster() {
+  if (!allStudents.length) {
+    document.getElementById('master-content').innerHTML='<div class="empty-state"><div class="icon">📭</div><p>No students yet</p></div>';
+    return;
+  }
+  let html = '';
+  const order=[['Humanities','B.A.'],['Humanities','M.A.'],['Science','B.Sc.'],['Science','M.Sc.'],['Commerce','B.Com'],['Commerce','M.Com']];
+  order.forEach(([stream,prog])=>{
+    const group = allStudents.filter(s=>s.stream===stream&&s.program===prog).sort((a,b)=>a.name.localeCompare(b.name));
+    if (!group.length) return;
+    const sc = stream==='Humanities'?'hum':stream==='Science'?'sci':'com';
+    html += `<h3 style="color:var(--${sc});border-bottom:2px solid var(--${sc});padding-bottom:5px;margin:16px 0 8px;">${stream} — ${prog} (${group.length})</h3>
+      <div class="print-header"><div><h2>Government Degree College Nandasain</h2><p>${stream} &middot; ${prog} &middot; Session 2026-27</p></div></div>
+      <div class="table-wrap master-print-block" data-count="${group.length}" style="border:1px solid var(--border);border-radius:8px;margin-bottom:12px;">
+      <table><thead><tr><th>#</th><th>Form No.</th><th>Name</th><th>Father</th><th>Sem</th><th>Cat</th><th>DSC Subjects</th><th>GE</th><th>SEC</th><th>AEC</th><th>VAC</th><th>12th %</th><th>Phone</th></tr></thead><tbody>
+      ${group.map((s,i)=>`<tr><td>${i+1}</td><td>${esc(s.form_number||'—')}</td><td><strong>${esc(s.name)}</strong></td>
+        <td>${esc(s.father||'—')}</td><td>Sem ${s.semester}</td><td>${s.category||'—'}</td>
+        <td>${(s.dsc||[]).join(', ')||'—'}</td>
+        <td>${esc(s.ge||'—')}</td><td>${esc(s.sec||'—')}</td><td>${esc(s.aec||'—')}</td><td>${esc(s.vac||'—')}</td>
+        <td>${esc(s.percentage_12th||'—')}</td>
+        <td>${telLink(s.phone)}</td></tr>`).join('')}
+      </tbody></table></div>`;
+  });
+  html += `<p style="font-size:12px;color:var(--muted);text-align:right;margin-top:8px;">Grand Total: ${allStudents.length} students</p>`;
+  document.getElementById('master-content').innerHTML = html;
+}
+
+function printMaster() {
+  generateMaster();
+  fitTablesToPage();
+  // Force any scrollable table containers to their natural full height before print.
+  // Some Android Chrome builds snapshot the scrolled/clipped state if print fires
+  // before layout settles, so we explicitly null out scroll + inline constraints.
+  document.querySelectorAll('.master-print-block, .table-wrap').forEach(el => {
+    el.scrollTop = 0;
+    el.style.maxHeight = 'none';
+    el.style.overflow = 'visible';
+  });
+  // Force a layout reflow so the browser commits the unclipped height.
+  void document.body.offsetHeight;
+  const originalTitle = document.title;
+  document.title = 'Master List — All Streams';
+  const restoreTitle = () => { document.title = originalTitle; };
+  window.addEventListener('afterprint', restoreTitle, { once: true });
+  setTimeout(() => {
+    window.print();
+    // Restore screen styles after the print dialog closes.
+    setTimeout(() => {
+      document.querySelectorAll('.master-print-block, .table-wrap').forEach(el => {
+        el.style.maxHeight = '';
+        el.style.overflow = '';
+      });
+      restoreTitle();
+    }, 500);
+  }, 400);
+}
+
+// Scale each stream table (font-size + row padding) so it fills roughly one A4-landscape
+// printed page instead of leaving a large blank gap when the student count is small —
+// and shrinks (measuring actual rendered height, not just a formula) when a table has many
+// rows and/or long wrapping cells (e.g. a long "DSC Subjects" list), so it doesn't blow up
+// into many mostly-blank pages.
+function fitTablesToPage() {
+  // Usable printed page height in px @ 96dpi: A4 landscape (297mm) minus margins minus header.
+  const PAGE_HEIGHT_PX = 980;   // approx usable body height per page
+  const HEADER_RESERVE_PX = 78; // space taken by centered .print-header (icon+title stacked) + h3 title
+  const MIN_FONT = 7, MAX_FONT = 15;     // px
+  const MIN_PAD = 2, MAX_PAD = 14;       // px (vertical cell padding)
+
+  document.querySelectorAll('.master-print-block').forEach(block => {
+    const count = parseInt(block.dataset.count || '0', 10);
+    if (!count) return;
+    const table = block.querySelector('table');
+    if (!table) return;
+
+    const availableForRows = PAGE_HEIGHT_PX - HEADER_RESERVE_PX;
+    const applySize = (font, pad) => {
+      table.style.setProperty('--cell-font', font + 'px');
+      table.querySelectorAll('th,td').forEach(cell => {
+        cell.style.fontSize = font + 'px';
+        cell.style.padding = pad + 'px 4px';
+      });
+      table.querySelectorAll('.badge,.cat-badge').forEach(b => {
+        b.style.fontSize = Math.max(7, font - 2) + 'px';
+      });
+    };
+
+    // First guess from the simple formula (fast path for tables with short cell content).
+    const rawRowHeight = availableForRows / count;
+    let font = Math.max(MIN_FONT, Math.min(MAX_FONT, Math.round(rawRowHeight / 2.6)));
+    let pad = Math.max(MIN_PAD, Math.min(MAX_PAD, Math.round(font * 0.45)));
+    applySize(font, pad);
+
+    // Then measure the ACTUAL rendered height (accounts for cells like "DSC Subjects"
+    // wrapping onto multiple lines, which the formula above can't predict) and shrink
+    // further, one step at a time, until it fits one page or hits the size floor.
+    let guard = 0;
+    while (block.offsetHeight > availableForRows && font > MIN_FONT && guard < 40) {
+      font = Math.max(MIN_FONT, font - 0.5);
+      pad = Math.max(MIN_PAD, Math.round(font * 0.4));
+      applySize(font, pad);
+      guard++;
+    }
+  });
+}
+window.addEventListener('beforeprint', fitTablesToPage);
+window.addEventListener('afterprint', () => {
+  document.querySelectorAll('.master-print-block th, .master-print-block td').forEach(cell => {
+    cell.style.fontSize = '';
+    cell.style.padding = '';
+  });
+  document.querySelectorAll('.master-print-block .badge, .master-print-block .cat-badge').forEach(b => {
+    b.style.fontSize = '';
+  });
+});
+
+// ===== TEACHER WISE =====
+function fillTeacherSubjects() {
+  updateTeacherSubjects();
+  document.getElementById('teacherType').onchange = ()=>{updateTeacherSubjects();renderTeacher();};
+}
+function updateTeacherSubjects() {
+  const type = document.getElementById('teacherType').value;
+  let subjects = new Set();
+  allStudents.forEach(s=>{
+    if (type==='dsc') (s.dsc||[]).forEach(d=>subjects.add(d));
+    else if (s[type]) subjects.add(s[type]);
+  });
+  const sel = document.getElementById('teacherSubject');
+  sel.innerHTML='<option value="">-- Select Subject --</option>'+[...subjects].sort().map(n=>`<option>${esc(n)}</option>`).join('');
+}
+function renderTeacher() {
+  const type = document.getElementById('teacherType').value;
+  const subj = document.getElementById('teacherSubject').value;
+  const div = document.getElementById('teacher-content');
+  if (!subj) { div.innerHTML='<div class="empty-state"><div class="icon">👆</div><p>Subject select karo</p></div>'; return; }
+  let list = type==='dsc' ? allStudents.filter(s=>(s.dsc||[]).includes(subj)) : allStudents.filter(s=>s[type]===subj);
+  if (!list.length) { div.innerHTML='<div class="empty-state"><div class="icon">📭</div><p>No students found</p></div>'; return; }
+  div.innerHTML = `<div class="print-header"><div><h2>Government Degree College Nandasain</h2><p>${subj} &middot; ${type.toUpperCase()} &middot; Session 2026-27</p></div></div>
+    <div class="table-card"><div class="table-head"><div class="table-head-title">${subj} — ${list.length} Students</div></div>
+    <div class="table-wrap"><table><thead><tr><th>#</th><th>Name</th><th>Program</th><th>Sem</th><th>Category</th><th>Father</th><th>Phone</th></tr></thead><tbody>
+    ${list.map((s,i)=>`<tr><td>${i+1}</td><td><strong>${esc(s.name)}</strong></td><td>${s.program||'—'}</td>
+      <td>Sem ${s.semester}</td><td>${s.category||'—'}</td><td>${esc(s.father||'—')}</td><td>${telLink(s.phone)}</td></tr>`).join('')}
+    </tbody></table></div></div>`;
+}
+
+// ===== FORM =====
+function updatePrograms() {
+  const stream = document.getElementById('f-stream').value;
+  const pSel = document.getElementById('f-program');
+  const map = {Humanities:['B.A.','M.A.'],Science:['B.Sc.','M.Sc.'],Commerce:['B.Com','M.Com']};
+  if (!stream) { pSel.innerHTML='<option value="">-- Select Stream First --</option>'; updateDSC(); return; }
+  pSel.innerHTML='<option value="">-- Select --</option>'+map[stream].map(p=>`<option>${p}</option>`).join('');
+  updateDSC();
+  document.getElementById('f-semester').innerHTML='<option value="">-- Select Program First --</option>';
+}
+function updateSemesters() {
+  const prog = document.getElementById('f-program').value;
+  const sSel = document.getElementById('f-semester');
+  const ug = ['B.A.','B.Sc.','B.Com'];
+  const isPG = prog && !ug.includes(prog);
+
+  if (!prog) { sSel.innerHTML='<option value="">-- Select Program First --</option>'; togglePGFields(false); return; }
+  const count = ug.includes(prog)?6:4;
+  sSel.innerHTML='<option value="">-- Select --</option>'+Array.from({length:count},(_,i)=>`<option value="${i+1}">Semester ${i+1}</option>`).join('');
+  togglePGFields(isPG);
+  updateDSC(); // refresh subjects based on program
+}
+
+function togglePGFields(isPG) {
+  // UG-only elements — hide for PG
+  ['ug-dsc-credits','ug-ge-row','ug-sec-aec-vac'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = isPG ? 'none' : '';
+  });
+  // PG-only elements
+  const pgCredits = document.getElementById('pg-major-credits');
+  const pgNotice = document.getElementById('pg-notice');
+  if (pgCredits) pgCredits.style.display = isPG ? '' : 'none';
+  if (pgNotice) pgNotice.style.display = isPG ? '' : 'none';
+
+  // DSC label
+  const lbl = document.getElementById('dsc-label');
+  if (lbl) lbl.textContent = isPG ? 'Major Subject (ek hi select karo)' : 'DSC Subjects (Stream select karne ke baad)';
+
+  // Clear UG fields if switching to PG
+  if (isPG) {
+    ['f-ge','f-sec','f-aec','f-vac'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  }
+}
+function populateSubjectDropdowns() {
+  // SEC, AEC, VAC from subjectOptions
+  const fill = (id, arr) => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">-- Select --</option>' +
+      arr.map(o=>`<option value="${esc(o)}">${esc(o)}</option>`).join('') +
+      '<option value="__other__">Other (type manually)…</option>';
+    if (arr.includes(cur)) sel.value = cur;
+  };
+  fill('f-sec', subjectOptions.sec || []);
+  fill('f-aec', subjectOptions.aec || []);
+  fill('f-vac', subjectOptions.vac || []);
+}
+
+function updateDSC() {
+  const stream = document.getElementById('f-stream').value;
+  const prog   = document.getElementById('f-program').value;
+  const dg     = document.getElementById('dsc-group');
+
+  // Determine which stream's subjects to show — from stream OR infer from program
+  const progStreamMap = {
+    'B.A.':'Humanities','M.A.':'Humanities',
+    'B.Sc.':'Science','M.Sc.':'Science',
+    'B.Com':'Commerce','M.Com':'Commerce'
+  };
+  const effectiveStream = (prog && progStreamMap[prog]) ? progStreamMap[prog] : stream;
+
+  if (!effectiveStream || !DSC[effectiveStream]) {
+    dg.innerHTML='<span style="color:var(--muted);font-size:12px;">Select stream first</span>';
+    const geEl = document.getElementById('f-ge');
+    if (geEl) geEl.innerHTML='<option value="">-- Select DSC first --</option>';
+    return;
+  }
+  dg.innerHTML = DSC[effectiveStream].map(s=>`<label class="checkbox-item"><input type="checkbox" value="${s}" name="dsc" onchange="updateGE()"> ${s}</label>`).join('');
+  updateGE();
+}
+
+function updateGE() {
+  const checked = getCheckedDSC();
+  const sel = document.getElementById('f-ge');
+  const cur = sel.value;
+  if (!checked.length) {
+    sel.innerHTML = '<option value="">-- Select DSC first --</option>';
+    return;
+  }
+  sel.innerHTML = '<option value="">-- Select GE --</option>' +
+    checked.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  if (checked.includes(cur)) sel.value = cur;
+}
+
+function getCheckedDSC() { return [...document.querySelectorAll('#dsc-group input:checked')].map(c=>c.value); }
+
+function resetForm() {
+  ['f-session','f-stream','f-program','f-semester','f-rollno','f-name','f-father','f-mother',
+   'f-dob','f-gender','f-category','f-phone','f-email','f-address']
+    .forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const crDefaults = {'f-cr-dsc1':4,'f-cr-dsc2':4,'f-cr-dsc3':4,'f-cr-ge':4,'f-cr-sec':2,'f-cr-aec':2,'f-cr-vac':2,'f-cr-pg-major':16};
+  Object.entries(crDefaults).forEach(([id,val])=>{const el=document.getElementById(id);if(el)el.value=val;});
+  ['f-ge','f-sec','f-aec','f-vac'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  togglePGFields(false);
+  updateDSC();
+  populateSubjectDropdowns();
+  showMsg('','');
+}
+
+function getSelVal(id) {
+  const el = document.getElementById(id);
+  if (!el) return '';
+  return el.value === '__other__' ? '' : (el.value||'');
+}
+
+async function saveStudent() {
+  const name = document.getElementById('f-name').value.trim();
+  const stream = document.getElementById('f-stream').value;
+  const program = document.getElementById('f-program').value;
+  const semester = document.getElementById('f-semester').value;
+  if (!name||!stream||!program||!semester) { showMsg('error','Name, Stream, Program aur Semester zaroori hain!'); return; }
+
+  const btn = document.getElementById('save-btn');
+  btn.disabled=true; btn.textContent='Saving...';
+
+  const isPG = ['M.A.','M.Sc.','M.Com'].includes(program);
+  const dscArr = getCheckedDSC();
+  const intVal = (id,def) => parseInt(document.getElementById(id)?.value)||def;
+
+  const record = {
+    name, stream, program, semester:parseInt(semester),
+    session:document.getElementById('f-session').value,
+    roll_no:document.getElementById('f-rollno').value.trim()||'',
+    father:document.getElementById('f-father').value.trim()||'',
+    mother:document.getElementById('f-mother').value.trim()||'',
+    dob:document.getElementById('f-dob').value||'',
+    gender:document.getElementById('f-gender').value||'',
+    category:document.getElementById('f-category').value||'',
+    phone:document.getElementById('f-phone').value.trim()||'',
+    email:document.getElementById('f-email').value.trim()||'',
+    address:document.getElementById('f-address').value.trim()||'',
+    dsc: isPG ? (dscArr.length ? [dscArr[0]] : []) : dscArr,
+    ge:  isPG ? '' : getSelVal('f-ge'),
+    sec: isPG ? '' : getSelVal('f-sec'),
+    aec: isPG ? '' : getSelVal('f-aec'),
+    vac: isPG ? '' : getSelVal('f-vac'),
+    credits: isPG ? {
+      major1: intVal('f-cr-pg-major', 16),
+      major2:0, major3:0, ge:0, sec:0, aec:0, vac:0
+    } : {
+      major1: intVal('f-cr-dsc1', 4),
+      major2: intVal('f-cr-dsc2', 4),
+      major3: intVal('f-cr-dsc3', 4),
+      ge:     intVal('f-cr-ge',   4),
+      sec:    intVal('f-cr-sec',  2),
+      aec:    intVal('f-cr-aec',  2),
+      vac:    intVal('f-cr-vac',  2)
+    }
+  };
+
+  if (currentMode==='online' && sbClient) {
+    const {data,error} = await sbClient.from('students').insert({
+      college_id:sbConfig.college,
+      session:record.session, stream:record.stream, program:record.program,
+      semester:record.semester, roll_no:record.roll_no||null, name:record.name,
+      father_name:record.father||null, mother_name:record.mother||null,
+      dob:record.dob||null, gender:record.gender||null, category:record.category||null,
+      phone:record.phone||null, email:record.email||null, address:record.address||null,
+      dsc_subjects:record.dsc, ge_subject:record.ge||null, sec_subject:record.sec||null,
+      aec_subject:record.aec||null, vac_subject:record.vac||null
+    }).select().single();
+    if (error) { showMsg('error','Error: '+error.message); }
+    else {
+      allStudents.unshift(mapOnlineToLocal(data));
+      showMsg('success','✅ Saved to Supabase!');
+      resetForm(); refreshAll();
+    }
+  } else {
+    record.id = Date.now().toString();
+    record.created_at = new Date().toISOString();
+    allStudents.unshift(record);
+    saveLocalStudents();
+    showMsg('success','✅ Saved locally!');
+    resetForm(); refreshAll();
+  }
+  btn.disabled=false; btn.textContent='💾 Save Admission';
+}
+
+function showMsg(type,text) {
+  const el=document.getElementById('form-msg');
+  el.className='msg '+type; el.textContent=text;
+  el.style.display=text?'block':'none';
+}
+
+// ===== SUBJECT FILTER =====
+function fillSubjectFilterDropdown() {
+  const sel = document.getElementById('sf-subject');
+  if (!sel) return;
+  const cur = sel.value;
+
+  // Collect all unique subjects across ALL types
+  const allSubjects = new Map(); // subject name -> Set of types where it appears
+
+  allStudents.forEach(s => {
+    // DSC
+    (s.dsc || []).forEach(d => {
+      if (!allSubjects.has(d)) allSubjects.set(d, new Set());
+      allSubjects.get(d).add('DSC');
+    });
+    // GE
+    if (s.ge) {
+      if (!allSubjects.has(s.ge)) allSubjects.set(s.ge, new Set());
+      allSubjects.get(s.ge).add('GE');
+    }
+    // SEC
+    if (s.sec) {
+      if (!allSubjects.has(s.sec)) allSubjects.set(s.sec, new Set());
+      allSubjects.get(s.sec).add('SEC');
+    }
+    // AEC
+    if (s.aec) {
+      if (!allSubjects.has(s.aec)) allSubjects.set(s.aec, new Set());
+      allSubjects.get(s.aec).add('AEC');
+    }
+    // VAC
+    if (s.vac) {
+      if (!allSubjects.has(s.vac)) allSubjects.set(s.vac, new Set());
+      allSubjects.get(s.vac).add('VAC');
+    }
+  });
+
+  // Sort alphabetically
+  const sorted = [...allSubjects.entries()].sort((a,b) => a[0].localeCompare(b[0]));
+
+  sel.innerHTML = '<option value="">-- Pehle Subject Chuno --</option>' +
+    sorted.map(([name, types]) => {
+      const typeStr = [...types].join('+');
+      return `<option value="${esc(name)}">${esc(name)} [${typeStr}]</option>`;
+    }).join('');
+
+  if (cur && [...allSubjects.keys()].includes(cur)) sel.value = cur;
+}
+
+function renderSubjectFilter() {
+  const subj = document.getElementById('sf-subject').value;
+  const progF = document.getElementById('sf-program').value;
+  const semF = document.getElementById('sf-sem').value;
+  const catF = document.getElementById('sf-cat').value;
+  const content = document.getElementById('sf-content');
+  const summaryRow = document.getElementById('sf-summary-row');
+  const badgesDiv = document.getElementById('sf-badges');
+
+  if (!subj) {
+    content.innerHTML = '<div class="empty-state"><div class="icon">🔍</div><p>Upar se subject select karo</p></div>';
+    summaryRow.style.display = 'none';
+    return;
+  }
+
+  // Find all students who have this subject in ANY role (DSC/GE/SEC/AEC/VAC)
+  // and note which role(s) they have it in
+  const results = [];
+  allStudents.forEach(s => {
+    const roles = [];
+    if ((s.dsc || []).includes(subj)) roles.push('DSC');
+    if (s.ge === subj) roles.push('GE');
+    if (s.sec === subj) roles.push('SEC');
+    if (s.aec === subj) roles.push('AEC');
+    if (s.vac === subj) roles.push('VAC');
+    if (roles.length > 0) results.push({ ...s, _roles: roles });
+  });
+
+  // Apply filters
+  let filtered = results.filter(s => {
+    if (progF && s.program !== progF) return false;
+    if (semF && String(s.semester) !== semF) return false;
+    if (catF && s.category !== catF) return false;
+    return true;
+  });
+
+  // Update print header
+  document.getElementById('sf-print-sub').textContent = `${subj} — Subject Filter | Session 2026-27`;
+
+  // Summary badges — count by role
+  const roleCounts = { DSC: 0, GE: 0, SEC: 0, AEC: 0, VAC: 0 };
+  filtered.forEach(s => s._roles.forEach(r => roleCounts[r]++));
+
+  const roleColors = { DSC: '#1a3a5c', GE: '#2e7d5a', SEC: '#6b2fa0', AEC: '#c0620b', VAC: '#a02f6b' };
+  const roleBg = { DSC: '#e3eaf2', GE: '#e8f5ee', SEC: '#f3e8fb', AEC: '#fef3e8', VAC: '#fbe8f0' };
+
+  summaryRow.style.display = 'block';
+  badgesDiv.innerHTML = `
+    <div style="background:#1a3a5c;color:#fff;border-radius:8px;padding:8px 16px;text-align:center;min-width:80px;">
+      <div style="font-size:22px;font-weight:800;">${filtered.length}</div>
+      <div style="font-size:10px;font-weight:700;opacity:.85;">TOTAL</div>
+    </div>` +
+    Object.entries(roleCounts)
+      .filter(([,c]) => c > 0)
+      .map(([role, count]) => `
+        <div style="background:${roleBg[role]};color:${roleColors[role]};border-radius:8px;padding:8px 16px;text-align:center;min-width:80px;border:1.5px solid ${roleColors[role]}22;">
+          <div style="font-size:22px;font-weight:800;">${count}</div>
+          <div style="font-size:10px;font-weight:700;">${role}</div>
+        </div>`).join('');
+
+  if (!filtered.length) {
+    content.innerHTML = '<div class="empty-state"><div class="icon">📭</div><p>Koi student nahi mila is filter ke saath</p></div>';
+    return;
+  }
+
+  // Group by Program for clarity
+  const byProgram = {};
+  filtered.forEach(s => {
+    const key = s.program || 'Unknown';
+    if (!byProgram[key]) byProgram[key] = [];
+    byProgram[key].push(s);
+  });
+
+  const progOrder = ['B.A.','B.Sc.','B.Com','M.A.','M.Sc.','M.Com'];
+  const progKeys = progOrder.filter(p => byProgram[p]).concat(Object.keys(byProgram).filter(p => !progOrder.includes(p)));
+
+  let html = '';
+
+  progKeys.forEach(prog => {
+    const group = byProgram[prog];
+    const sc = ['B.A.','M.A.'].includes(prog) ? 'hum' : ['B.Sc.','M.Sc.'].includes(prog) ? 'sci' : 'com';
+    const scColor = sc === 'hum' ? 'var(--hum)' : sc === 'sci' ? 'var(--sci)' : 'var(--com)';
+
+    html += `<div class="table-card" style="margin-bottom:14px;">
+      <div class="table-head">
+        <div class="table-head-title" style="color:${scColor};">${prog} — ${group.length} student${group.length > 1 ? 's' : ''}</div>
+        <div class="no-print" style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="btn btn-print" onclick="printWithTitle('${esc(subj)} — ${prog} Subject List')">🖨 Print</button>
+        </div>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr>
+          <th>#</th><th>Name</th><th>Father</th>
+          <th>Sem</th><th>Cat</th>
+          <th style="background:#ffe8c8;color:#a64d00;">Role (DSC/GE/SEC/AEC/VAC)</th>
+          <th>DSC Subjects</th><th>GE</th><th>SEC</th><th>AEC</th>
+          <th>Phone</th>
+          <th class="no-print">Action</th>
+        </tr></thead>
+        <tbody>`;
+
+    group.sort((a,b) => a.name.localeCompare(b.name)).forEach((s, i) => {
+      const roleBadges = s._roles.map(r =>
+        `<span style="display:inline-block;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:700;background:${roleBg[r]};color:${roleColors[r]};border:1px solid ${roleColors[r]}44;">${r}</span>`
+      ).join(' ');
+
+      html += `<tr style="${s._roles.length > 1 ? 'background:#fffbea;' : ''}">
+        <td>${i + 1}</td>
+        <td><strong>${esc(s.name)}</strong></td>
+        <td>${esc(s.father || '—')}</td>
+        <td>Sem ${s.semester}</td>
+        <td>${s.category || '—'}</td>
+        <td>${roleBadges}</td>
+        <td style="max-width:160px;white-space:normal;">${(s.dsc || []).join(', ') || '—'}</td>
+        <td>${esc(s.ge || '—')}</td>
+        <td style="max-width:140px;white-space:normal;font-size:11px;">${esc(s.sec || '—')}</td>
+        <td style="max-width:140px;white-space:normal;font-size:11px;">${esc(s.aec || '—')}</td>
+        <td>${telLink(s.phone)}</td>
+        <td class="no-print"><button class="btn btn-del" onclick="deleteStudent('${s.id}')">🗑</button></td>
+      </tr>`;
+    });
+
+    html += `</tbody></table></div></div>`;
+  });
+
+  // Grand total note
+  html += `<p style="font-size:12px;color:var(--muted);text-align:right;margin-top:4px;">
+    <strong>${subj}</strong> — Total ${filtered.length} students
+    ${Object.entries(roleCounts).filter(([,c])=>c>0).map(([r,c])=>`${r}:${c}`).join(', ')}
+  </p>`;
+
+  content.innerHTML = html;
+}
+
+function refreshAll() {
+  renderDashboard(); renderTable();
+  Object.keys(streamSubTabState).forEach(k=>renderStreamContent(k));
+  generateCatStats(); generateMaster(); fillTeacherSubjects(); renderTeacher(); renderMeritList();
+  fillSubjectFilterDropdown();
+  if (document.getElementById('sf-subject') && document.getElementById('sf-subject').value) {
+    renderSubjectFilter();
+  }
+}
+
+// ===== DELETE =====
+async function deleteStudent(id) {
+  if (!confirm('Is student ko delete karna chahte hain?')) return;
+  if (currentMode==='online' && sbClient) {
+    await sbClient.from('students').delete().eq('id',id);
+    await loadOnlineStudents();
+  } else {
+    allStudents = allStudents.filter(s=>s.id!==id);
+    saveLocalStudents();
+  }
+  refreshAll();
+}
+
+// ===== EXPORT =====
+function totalCredits(s) {
+  if (!s.credits) return '';
+  const c = s.credits;
+  return (c.major1||0)+(c.major2||0)+(c.major3||0)+(c.ge||0)+(c.sec||0)+(c.aec||0)+(c.vac||0);
+}
+function exportCSV() {
+  if (!allStudents.length) { alert('No data to export'); return; }
+  const headers = [
+    'Form No','Roll No','Name','Father','Mother','Stream','Program','Semester',
+    'Category','Gender','Phone','Email','Address',
+    'DSC1','DSC1-Cr','DSC2','DSC2-Cr','DSC3','DSC3-Cr',
+    'GE','GE-Cr','SEC','SEC-Cr','AEC','AEC-Cr','VAC','VAC-Cr','Total Credits'
+  ];
+  const rows = allStudents.map(s => {
+    const dsc = s.dsc || [];
+    const cr = s.credits || {};
+    return [
+      s.form_number||'', s.roll_no||'', s.name||'', s.father||'', s.mother||'',
+      s.stream||'', s.program||'', s.semester||'',
+      s.category||'', s.gender||'', s.phone||'', s.email||'', s.address||'',
+      dsc[0]||'', cr.major1||'',
+      dsc[1]||'', cr.major2||'',
+      dsc[2]||'', cr.major3||'',
+      s.ge||'', cr.ge||'',
+      s.sec||'', cr.sec||'',
+      s.aec||'', cr.aec||'',
+      s.vac||'', cr.vac||'',
+      totalCredits(s)
+    ].map(v=>`"${(v||'').toString().replace(/"/g,'""')}"`);
+  });
+  const csv = [headers.map(h=>`"${h}"`), ...rows].map(r=>r.join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download = 'students_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+}
+
+// ===== EXPORT TO DOCS (.doc) =====
+function exportDocs_allStudents() {
+  exportToDocs('page-records', 'all_students');
+}
+
+function exportToDocs(containerId, filename) {
+  // Find all tables in the container
+  const container = document.getElementById(containerId);
+  if (!container) { alert('Content nahi mila'); return; }
+
+  const tables = container.querySelectorAll('table');
+  if (!tables.length) { alert('Koi table nahi mila export ke liye'); return; }
+
+  // College header
+  const collegeHeader = `
+    <div style="text-align:center;border-bottom:2px solid #1a3a5c;padding-bottom:8px;margin-bottom:14px;">
+      <h2 style="font-size:16pt;color:#1a3a5c;margin:0;">Government Degree College Nandasain</h2>
+      <p style="font-size:10pt;color:#555;margin:4px 0 0;">Chamoli, Uttarakhand | Session 2026-27</p>
+    </div>`;
+
+  let tablesHtml = '';
+
+  tables.forEach(tbl => {
+    // Try to find group title from nearest .table-head-title
+    let titleEl = null;
+    let parent = tbl.closest('.table-card');
+    if (parent) {
+      titleEl = parent.querySelector('.table-head-title');
+    }
+    if (!titleEl) {
+      // Walk up to find nearest h3
+      let el = tbl.parentElement;
+      while (el && el !== container) {
+        const h3 = el.previousElementSibling;
+        if (h3 && h3.tagName === 'H3') { titleEl = h3; break; }
+        el = el.parentElement;
+      }
+    }
+
+    const titleText = titleEl ? titleEl.innerText || titleEl.textContent : '';
+
+    // Clone table, remove no-print columns (Action)
+    const clone = tbl.cloneNode(true);
+    // Remove Action columns (last th/td with class no-print)
+    clone.querySelectorAll('.no-print').forEach(el => el.remove());
+
+    // Remove Stream and Roll No columns from docs export
+    const headerCells = clone.querySelectorAll('thead th');
+    const colsToRemove = [];
+    headerCells.forEach((th, idx) => {
+      const txt = th.textContent.trim().toUpperCase();
+      if (txt === 'STREAM' || txt === 'ROLL NO') colsToRemove.push(idx);
+    });
+    colsToRemove.sort((a,b) => b - a);
+    colsToRemove.forEach(colIdx => {
+      clone.querySelectorAll('tr').forEach(row => {
+        if (row.children[colIdx]) row.children[colIdx].remove();
+      });
+    });
+
+    // Build styled table HTML
+    const tableHtml = clone.outerHTML
+      .replace(/<table/g, '<table style="width:100%;border-collapse:collapse;margin-bottom:16px;font-size:9pt;"')
+      .replace(/<th/g, '<th style="background:#dde6f0;color:#1a3a5c;border:1px solid #888;padding:5px 6px;font-size:8pt;text-align:left;"')
+      .replace(/<td/g, '<td style="border:1px solid #bbb;padding:4px 6px;font-size:8pt;vertical-align:top;"');
+
+    tablesHtml += (titleText ? `<h3 style="font-size:11pt;color:#1a3a5c;margin:14px 0 6px;border-bottom:1px solid #ccc;padding-bottom:3px;">${titleText}</h3>` : '') + tableHtml;
+  });
+
+  const printDate = new Date().toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'numeric'});
+
+  const docContent = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GDC Nandasain — ${filename || 'Export'}</title>
+  <style>
+    body { font-family: Arial, sans-serif; font-size: 10pt; color: #1e2d3d; margin: 16px; background: #fff; }
+    h2 { font-size: 15pt; color: #1a3a5c; margin: 0; }
+    h3 { font-size: 11pt; color: #1a3a5c; margin: 14px 0 6px; border-bottom: 1px solid #ccc; padding-bottom: 3px; }
+    p { font-size: 10pt; color: #555; margin: 4px 0; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 9pt; }
+    th { background: #dde6f0; color: #1a3a5c; border: 1px solid #888; padding: 6px 7px; font-size: 8pt; text-align: left; }
+    td { border: 1px solid #bbb; padding: 5px 7px; font-size: 8pt; vertical-align: top; }
+    tr:nth-child(even) td { background: #f4f6f9; }
+    .header-box { text-align: center; border-bottom: 2px solid #1a3a5c; padding-bottom: 10px; margin-bottom: 14px; }
+    .print-btn { display: inline-block; margin: 10px 0 16px; padding: 8px 18px; background: #1a3a5c; color: #fff; border: none; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: 700; }
+    @media print { .print-btn { display: none; } @page { size: A4 landscape; margin: 10mm; } }
+    .badge, .cat-badge { display: inline; padding: 1px 4px; border-radius: 3px; font-size: 7pt; font-weight: 700; }
+    strong { font-weight: 700; }
+  </style>
+</head>
+<body>
+  <div class="header-box">
+    <h2>Government Degree College Nandasain</h2>
+    <p>Chamoli, Uttarakhand | Session 2026-27</p>
+  </div>
+  <button class="print-btn" onclick="window.print()">🖨 Print / Save PDF</button>
+  <p style="font-size:8pt;color:#aaa;text-align:right;margin-bottom:8px;">Exported: ${printDate}</p>
+  ${tablesHtml}
+</body>
+</html>`;
+
+  const blob = new Blob([docContent], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (filename || 'export') + '_' + new Date().toISOString().slice(0,10) + '.html';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+// ===== NAVIGATION =====
+function showPage(page, el) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  document.querySelectorAll('.tab-item').forEach(i=>i.classList.remove('active'));
+  if(el) el.classList.add('active');
+  if(page==='humanities') renderStreamContent('humanities');
+  if(page==='science') renderStreamContent('science');
+  if(page==='commerce') renderStreamContent('commerce');
+  if(page==='catstats') generateCatStats();
+  if(page==='meritlist') renderMeritList();
+  if(page==='master') generateMaster();
+  if(page==='teacher') {fillTeacherSubjects();renderTeacher();}
+  if(page==='subjectfilter') { fillSubjectFilterDropdown(); renderSubjectFilter(); }
+  if(page==='settings') { fillSbSettings(); fillSettingsForm(); }
+}
+function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
+
+// ===== SETTINGS =====
+function fillSbSettings() {
+  const cfg = loadSbConfig();
+  document.getElementById('sb-url').value = cfg.url||'';
+  document.getElementById('sb-key').value = cfg.key||'';
+  document.getElementById('sb-college').value = cfg.college||'';
+}
+function fillSettingsForm() {
+  // Fill Supabase settings
+  fillSbSettings();
+  // Fill subject option textareas
+  subjectOptions = loadSubjectOptions();
+  const map = {
+    'opt-humanity':'humanity','opt-science':'science','opt-commerce':'commerce',
+    'opt-sec':'sec','opt-aec':'aec','opt-vac':'vac'
+  };
+  Object.entries(map).forEach(([id, key]) => {
+    const el = document.getElementById(id);
+    if (el) el.value = (subjectOptions[key]||[]).join(', ');
+  });
+}
+function saveSubjectOptions() {
+  const parse = v => v.split(',').map(s=>s.trim()).filter(s=>s.length>0);
+  const map = {
+    'opt-humanity':'humanity','opt-science':'science','opt-commerce':'commerce',
+    'opt-sec':'sec','opt-aec':'aec','opt-vac':'vac'
+  };
+  Object.entries(map).forEach(([id, key]) => {
+    const el = document.getElementById(id);
+    if (el) subjectOptions[key] = parse(el.value);
+  });
+  // Sync DSC constant so entry form updates too
+  DSC.Humanities = subjectOptions.humanity;
+  DSC.Science = subjectOptions.science;
+  DSC.Commerce = subjectOptions.commerce;
+  saveSubjectOptionsToStorage(subjectOptions);
+  populateSubjectDropdowns();
+  const msg = document.getElementById('subj-msg');
+  if (msg) { msg.style.color='var(--success)'; msg.textContent='✅ Subject options saved!'; setTimeout(()=>msg.textContent='',3000); }
+}
+function resetSubjectOptions() {
+  if (!confirm('Reset all subject options to defaults?')) return;
+  subjectOptions = JSON.parse(JSON.stringify(SUBJECT_DEFAULTS));
+  DSC.Humanities = subjectOptions.humanity;
+  DSC.Science = subjectOptions.science;
+  DSC.Commerce = subjectOptions.commerce;
+  saveSubjectOptionsToStorage(subjectOptions);
+  populateSubjectDropdowns();
+  fillSettingsForm();
+  const msg = document.getElementById('subj-msg');
+  if (msg) { msg.style.color='var(--success)'; msg.textContent='✅ Reset to defaults!'; setTimeout(()=>msg.textContent='',3000); }
+}
+function saveSbSettings() {
+  const cfg = {url:document.getElementById('sb-url').value.trim(),key:document.getElementById('sb-key').value.trim(),college:document.getElementById('sb-college').value.trim()};
+  localStorage.setItem(LS.SB, JSON.stringify(cfg));
+  document.getElementById('sb-msg').style.color='var(--success)';
+  document.getElementById('sb-msg').textContent='✅ Saved! Next login pe apply hoga.';
+}
+async function syncNow() {
+  if (!sbClient) { document.getElementById('sb-msg').textContent='⚠ Pehle online login karo.'; return; }
+  document.getElementById('sb-msg').textContent='🔄 Syncing...';
+  await loadOnlineStudents();
+  // Push local-only records that don't exist online
+  document.getElementById('sb-msg').style.color='var(--success)';
+  document.getElementById('sb-msg').textContent='✅ Synced! '+allStudents.length+' records.';
+  refreshAll();
+}
+function changeLocalPass() {
+  const np=document.getElementById('newPass').value;
+  const cp=document.getElementById('confirmPass').value;
+  const msg=document.getElementById('pass-msg');
+  if(np.length<4){msg.style.color='var(--error)';msg.textContent='⚠ Kam se kam 4 characters.';return;}
+  if(np!==cp){msg.style.color='var(--error)';msg.textContent='⚠ Passwords match nahi karte.';return;}
+  localStorage.setItem(LS.PASS,btoa(np));
+  msg.style.color='var(--success)';msg.textContent='✅ Password updated!';
+}
+function doBackup() {
+  const data={type:'ark-v13-backup',version:13,exportedAt:new Date().toISOString(),students:allStudents};
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
+  a.download='admission-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();
+  document.getElementById('backup-msg').style.color='var(--success)';
+  document.getElementById('backup-msg').textContent='✅ Backup downloaded!';
+}
+function doRestore(e) {
+  const file=e.target.files[0]; if(!file) return;
+  const msg=document.getElementById('backup-msg');
+  new Promise((res,rej)=>{const r=new FileReader();r.onload=ev=>res(ev.target.result);r.onerror=rej;r.readAsText(file);}).then(text=>{
+    try{
+      const data=JSON.parse(text);
+      if(!Array.isArray(data.students)) throw new Error('Invalid');
+      if(!confirm('Replace data with backup? ('+data.students.length+' students)')) return;
+      allStudents=data.students;saveLocalStudents();refreshAll();
+      msg.style.color='var(--success)';msg.textContent='✅ Restored! '+allStudents.length+' students.';
+    }catch(err){msg.style.color='var(--error)';msg.textContent='⚠ Invalid backup file.';}
+    e.target.value='';
+  });
+}
+function clearAll() {
+  if(!confirm('Delete ALL student records?')) return;
+  if(!confirm('Sure? Cannot be undone!')) return;
+  allStudents=[];saveLocalStudents();refreshAll();alert('All records deleted.');
+}
+
+// ===== HELPERS =====
+// Temporarily changes the document title before printing, so the PDF the browser
+// suggests saving (its default filename) matches this report's name instead of
+// always being "Admission Record Keeper v18 — GDC Nandasain". Restores the
+// original title afterward (via afterprint, with a timeout fallback for print
+// flows where afterprint doesn't reliably fire).
+function printWithTitle(title) {
+  const original = document.title;
+  document.title = title;
+  const restore = () => { document.title = original; };
+  window.addEventListener('afterprint', restore, { once: true });
+  setTimeout(restore, 3000);
+  window.print();
+}
+function esc(str){if(!str) return '';return str.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+// Renders a phone number as a tel: link so it's tap-to-dial both on screen and
+// in the PDF (Chrome/Android's Print-to-PDF keeps <a href> links clickable).
+// Styled blue + underlined so it visually reads as clickable, like a normal link.
+function telLink(phone){
+  const p = (phone||'').toString().trim();
+  if (!p) return '—';
+  const dial = p.replace(/[^\d+]/g,'');
+  if (!dial) return esc(p);
+  return `<a href="tel:${dial}" style="color:#1a56db;text-decoration:underline;">${esc(p)}</a>`;
+}
+// Same idea for email: a mailto: link, styled blue + underlined, tap-to-email
+// on screen and clickable in the PDF.
+function mailLink(email){
+  const e = (email||'').toString().trim();
+  if (!e) return '—';
+  return `<a href="mailto:${encodeURIComponent(e).replace(/%40/g,'@')}" style="color:#1a56db;text-decoration:underline;">${esc(e)}</a>`;
+}
+
+// ===== EXCEL IMPORT =====
+let excelImportData = []; // parsed + mapped rows ready to import
+
+// Column name aliases → our field names
+const COL_MAP = {
+  // name
+  'name':         'name', 'student name': 'name', 'student':      'name', 'full name': 'name',
+  'name of the applicant': 'name', 'applicant name': 'name',
+  // roll
+  'roll no':      'roll_no', 'roll number': 'roll_no', 'roll':    'roll_no', 'enrollment': 'roll_no', 'enroll no': 'roll_no',
+  'form number':  'form_number', 'application number': 'form_number',
+  // father
+  'father':       'father', "father's name": 'father', 'father name': 'father', 'fname': 'father',
+  'name of father': 'father',
+  // mother
+  'mother':       'mother', "mother's name": 'mother', 'mother name': 'mother', 'mname': 'mother',
+  'name of mother': 'mother',
+  // stream
+  'stream':       'stream',
+  // program / class
+  'program':      'program', 'class':        'program', 'course':      'program',
+  'programme name': 'program', 'program name': 'program',
+  // semester
+  'semester':     'semester', 'sem':         'semester',
+  // session
+  'session':      'session', 'academic year': 'session', 'year':      'session',
+  // category
+  'category':     'category', 'cat':         'category', 'caste':      'category',
+  // gender
+  'gender':       'gender', 'sex':           'gender',
+  // phone
+  'phone':        'phone', 'mobile':         'phone', 'contact':    'phone', 'mobile no': 'phone', 'phone no': 'phone',
+  // email
+  'email':        'email', 'e-mail':         'email',
+  // address
+  'address':      'address', 'village':      'address', 'addr':       'address',
+  // dob
+  'dob':          'dob', 'date of birth':    'dob', 'birth date':  'dob',
+  // dsc subjects
+  'dsc1':         'dsc1', 'dsc-1':          'dsc1', 'major1':     'dsc1', 'dsc 1':      'dsc1', 'subject 1': 'dsc1',
+  'dsc2':         'dsc2', 'dsc-2':          'dsc2', 'major2':     'dsc2', 'dsc 2':      'dsc2', 'subject 2': 'dsc2',
+  'dsc3':         'dsc3', 'dsc-3':          'dsc3', 'major3':     'dsc3', 'dsc 3':      'dsc3', 'subject 3': 'dsc3',
+  'subject 1 (major)': 'dsc1', 'subject 2 (major)': 'dsc2', 'subject 3 (major elective)': 'dsc3',
+  // ge sec aec vac
+  'ge':           'ge', 'generic elective': 'ge',
+  'sec':          'sec', 'skill enhancement': 'sec',
+  'aec':          'aec', 'ability enhancement': 'aec',
+  'vac':          'vac', 'value added':     'vac',
+  // split DOB (Samarth portal format)
+  'dob day':      'dob_day', 'dob month':    'dob_month', 'dob year': 'dob_year',
+  // 12th percentage (Samarth portal format)
+  'xii percentage': 'percentage_12th', '12th percentage': 'percentage_12th', 'xii %': 'percentage_12th', 'percentage': 'percentage_12th',
+};
+
+function mapColHeader(raw) {
+  const key = (raw||'').toString().trim().toLowerCase();
+  return COL_MAP[key] || null;
+}
+
+function normalizeStream(val) {
+  if (!val) return null;
+  const v = val.toString().toLowerCase().trim();
+  if (v.includes('hum') || v.includes('art') || v.includes('b.a') || v.includes('m.a')) return 'Humanities';
+  if (v.includes('sci') || v.includes('b.sc') || v.includes('m.sc')) return 'Science';
+  if (v.includes('com') || v.includes('b.com') || v.includes('m.com')) return 'Commerce';
+  return null;
+}
+
+function normalizeProgram(val) {
+  if (!val) return null;
+  const v = val.toString().trim();
+  const map = {
+    'ba':'B.A.','b.a':'B.A.','b.a.':'B.A.',
+    'bsc':'B.Sc.','b.sc':'B.Sc.','b.sc.':'B.Sc.',
+    'bcom':'B.Com','b.com':'B.Com',
+    'ma':'M.A.','m.a':'M.A.','m.a.':'M.A.',
+    'msc':'M.Sc.','m.sc':'M.Sc.','m.sc.':'M.Sc.',
+    'mcom':'M.Com','m.com':'M.Com',
+  };
+  const direct = map[v.toLowerCase().replace(/\s/g,'')];
+  if (direct) return direct;
+  // Samarth-style long names e.g. "BACHELOR OF ARTS (B.A.)"
+  const vu = v.toUpperCase();
+  if (vu.includes('BACHELOR OF ARTS')) return 'B.A.';
+  if (vu.includes('BACHELOR OF SCIENCE')) return 'B.Sc.';
+  if (vu.includes('BACHELOR OF COMMERCE')) return 'B.Com';
+  if (vu.includes('MASTER OF ARTS')) return 'M.A.';
+  if (vu.includes('MASTER OF SCIENCE')) return 'M.Sc.';
+  if (vu.includes('MASTER OF COMMERCE')) return 'M.Com';
+  return v;
+}
+
+function normalizeCategory(val) {
+  if (!val) return '';
+  const v = val.toString().trim().toUpperCase();
+  if (v==='GEN' || v==='GENERAL' || v==='UR') return 'General';
+  if (v==='OBC') return 'OBC';
+  if (v==='SC') return 'SC';
+  if (v==='ST') return 'ST';
+  if (v==='EWS') return 'EWS';
+  if (v==='PWD' || v==='PH' || v==='DIVYANG' || v==='DISABLED' || v==='PERSON WITH DISABILITY') return 'PWD';
+  return val.toString().trim();
+}
+
+// The Samarth/govt-portal Excel exports GENDER as "MALE"/"FEMALE" (all caps),
+// but the app's own Add/Edit form + stats tables use "Male"/"Female"/"Other".
+// Without this, imported gender values never matched during counting (silently 0).
+function normalizeGender(val) {
+  if (!val) return '';
+  const v = val.toString().trim().toUpperCase();
+  if (v==='M' || v==='MALE') return 'Male';
+  if (v==='F' || v==='FEMALE') return 'Female';
+  if (v==='O' || v==='OTHER' || v==='TRANSGENDER' || v==='THIRD GENDER') return 'Other';
+  return val.toString().trim();
+}
+
+function handleExcelImport(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const msgEl = document.getElementById('excel-msg');
+  msgEl.textContent = '⏳ File read ho rahi hai...';
+  msgEl.style.color = 'var(--muted)';
+
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      const data = new Uint8Array(ev.target.result);
+      const wb = XLSX.read(data, {type:'array', cellDates:true});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+
+      if (!rows.length) { msgEl.style.color='var(--error)'; msgEl.textContent='⚠ File khaali hai.'; return; }
+
+      // Find header row (first row with at least 2 non-empty cells)
+      let headerRowIdx = 0;
+      for (let i = 0; i < Math.min(5, rows.length); i++) {
+        if (rows[i].filter(c=>c!=='').length >= 2) { headerRowIdx = i; break; }
+      }
+      const headers = rows[headerRowIdx];
+      const dataRows = rows.slice(headerRowIdx + 1).filter(r => r.some(c => c !== ''));
+
+      if (!dataRows.length) { msgEl.style.color='var(--error)'; msgEl.textContent='⚠ Data rows nahi mili.'; return; }
+
+      // Map headers to our fields
+      const colIndex = {}; // fieldName → column index
+      headers.forEach((h, i) => {
+        const mapped = mapColHeader(h);
+        if (mapped && !(mapped in colIndex)) colIndex[mapped] = i;
+      });
+
+      // Defaults from UI
+      const defStream  = document.getElementById('imp-def-stream').value;
+      const defProgram = document.getElementById('imp-def-program').value;
+      const defSem     = document.getElementById('imp-def-sem').value;
+      const defSession = document.getElementById('imp-def-session').value;
+
+      const get = (row, field) => {
+        if (!(field in colIndex)) return '';
+        const val = row[colIndex[field]];
+        return val !== undefined && val !== null ? val.toString().trim() : '';
+      };
+
+      excelImportData = [];
+      let skipped = 0;
+
+      dataRows.forEach((row, idx) => {
+        const rawName = get(row, 'name');
+        if (!rawName) { skipped++; return; } // skip rows with no name
+
+        const stream  = normalizeStream(get(row,'stream'))  || defStream;
+        const program = normalizeProgram(get(row,'program')) || defProgram;
+        const semRaw  = get(row,'semester');
+        const semester= semRaw ? parseInt(semRaw)||parseInt(defSem) : parseInt(defSem);
+        const session = get(row,'session') || defSession;
+
+        const dsc1 = get(row,'dsc1');
+        const dsc2 = get(row,'dsc2');
+        const dsc3 = get(row,'dsc3');
+        const dscArr = [dsc1,dsc2,dsc3].filter(d=>d);
+
+        // Handle DOB — could be Date object from cellDates:true
+        let dob = get(row,'dob');
+        if (row[colIndex['dob']] instanceof Date) {
+          const d = row[colIndex['dob']];
+          dob = d.toISOString().slice(0,10);
+        } else if (dob && !isNaN(Number(dob))) {
+          // Excel serial date number
+          try {
+            const d = XLSX.SSF.parse_date_code(Number(dob));
+            dob = `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`;
+          } catch(e) { dob = ''; }
+        }
+        // Samarth portal split DOB (DOB DAY / DOB MONTH / DOB YEAR columns)
+        if (!dob && ('dob_day' in colIndex) && ('dob_month' in colIndex) && ('dob_year' in colIndex)) {
+          const dd = get(row,'dob_day'), mm = get(row,'dob_month'), yy = get(row,'dob_year');
+          if (dd && mm && yy) {
+            dob = `${yy}-${String(mm).padStart(2,'0')}-${String(dd).padStart(2,'0')}`;
+          }
+        }
+
+        excelImportData.push({
+          id: Date.now().toString() + '_' + idx,
+          created_at: new Date().toISOString(),
+          name:     rawName,
+          roll_no:  get(row,'roll_no'),
+          form_number: get(row,'form_number'),
+          father:   get(row,'father'),
+          mother:   get(row,'mother'),
+          stream, program, semester, session,
+          category: normalizeCategory(get(row,'category')),
+          gender:   normalizeGender(get(row,'gender')),
+          phone:    get(row,'phone'),
+          email:    get(row,'email'),
+          address:  get(row,'address'),
+          dob,
+          percentage_12th: get(row,'percentage_12th'),
+          dsc:  dscArr,
+          ge:   get(row,'ge'),
+          sec:  get(row,'sec'),
+          aec:  get(row,'aec'),
+          vac:  get(row,'vac'),
+          credits: {major1:4,major2:4,major3:4,ge:4,sec:2,aec:2,vac:2}
+        });
+      });
+
+      if (!excelImportData.length) {
+        msgEl.style.color='var(--error)';
+        msgEl.textContent=`⚠ Koi valid student row nahi mili. (${skipped} rows mein naam nahi tha)`;
+        return;
+      }
+
+      // Show preview
+      showExcelPreview(excelImportData, skipped, Object.keys(colIndex));
+      msgEl.textContent = '';
+
+    } catch(err) {
+      msgEl.style.color='var(--error)';
+      msgEl.textContent='⚠ File read mein error: ' + err.message;
+      console.error(err);
+    }
+    e.target.value = '';
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function showExcelPreview(data, skipped, mappedFields) {
+  const previewDiv = document.getElementById('excel-preview');
+  const infoEl = document.getElementById('excel-preview-info');
+  const head = document.getElementById('excel-preview-head');
+  const body = document.getElementById('excel-preview-body');
+
+  infoEl.innerHTML = `✅ <strong>${data.length}</strong> students milے | Columns detected: <strong>${mappedFields.join(', ')}</strong>${skipped?' | '+skipped+' rows skip (naam nahi)':''}`;
+
+  // Preview columns
+  const PREVIEW_COLS = [
+    {key:'name',label:'Name'},{key:'roll_no',label:'Roll No'},{key:'stream',label:'Stream'},
+    {key:'program',label:'Program'},{key:'semester',label:'Sem'},{key:'category',label:'Cat'},
+    {key:'gender',label:'Gender'},{key:'phone',label:'Phone'},
+    {key:'dsc',label:'DSC'},{key:'ge',label:'GE'},{key:'sec',label:'SEC'},{key:'aec',label:'AEC'},{key:'vac',label:'VAC'}
+  ].filter(c => {
+    if (c.key==='dsc') return data.some(r=>r.dsc&&r.dsc.length);
+    return data.some(r=>r[c.key]);
+  });
+
+  head.innerHTML = '<tr>' + PREVIEW_COLS.map(c=>`<th style="background:#e3eaf2;padding:7px 10px;font-size:10px;font-weight:700;color:var(--primary);white-space:nowrap;border:1px solid #b9c6d6;">${c.label}</th>`).join('') + '</tr>';
+
+  const previewRows = data.slice(0, 10);
+  body.innerHTML = previewRows.map((r,i) =>
+    '<tr>' + PREVIEW_COLS.map(c => {
+      const val = c.key==='dsc' ? (r.dsc||[]).join(', ') : (r[c.key]||'—');
+      return `<td style="padding:6px 10px;font-size:11px;border:1px solid #d0d7e2;${i%2?'background:#f7f9fc':''}">${esc(val.toString())}</td>`;
+    }).join('') + '</tr>'
+  ).join('');
+
+  if (data.length > 10) {
+    const cols = PREVIEW_COLS.length;
+    body.innerHTML += `<tr><td colspan="${cols}" style="text-align:center;padding:8px;font-size:11px;color:var(--muted);">… aur ${data.length-10} rows (sirf pehle 10 preview mein)</td></tr>`;
+  }
+
+  previewDiv.style.display = 'block';
+}
+
+function confirmExcelImport() {
+  if (!excelImportData.length) return;
+  const btn = document.getElementById('excel-import-btn');
+  btn.disabled = true; btn.textContent = 'Importing...';
+
+  let added = 0, dupes = 0, updated = 0;
+  const FILL_FIELDS = ['form_number','percentage_12th','roll_no','father','mother','phone','email','address','dob','gender','category'];
+  excelImportData.forEach(newS => {
+    // Duplicate check: prefer strong unique IDs (form_number / roll_no).
+    // Only fall back to name-only matching when we ALSO confirm father's name matches —
+    // two different students can share a first name (e.g. "SALONI"), so name alone is not safe.
+    const existing = allStudents.find(ex => {
+      if (newS.form_number && ex.form_number) return ex.form_number === newS.form_number;
+      if (newS.roll_no && ex.roll_no) return ex.roll_no === newS.roll_no;
+      const sameName = ex.name.toLowerCase() === newS.name.toLowerCase();
+      if (!sameName) return false;
+      if (newS.father && ex.father) return ex.father.toLowerCase() === newS.father.toLowerCase();
+      // Neither record has father's name to disambiguate — treat as same person only if no other identifier exists at all.
+      return !newS.form_number && !newS.roll_no && !ex.form_number && !ex.roll_no;
+    });
+    if (existing) {
+      dupes++;
+      let changed = false;
+      FILL_FIELDS.forEach(f => {
+        if ((existing[f] === undefined || existing[f] === null || existing[f] === '') && newS[f]) {
+          existing[f] = newS[f];
+          changed = true;
+        }
+      });
+      if (changed) updated++;
+      return;
+    }
+    newS.id = Date.now().toString() + Math.random().toString(36).slice(2,6);
+    allStudents.unshift(newS);
+    added++;
+  });
+
+  saveLocalStudents();
+  refreshAll();
+
+  const msgEl = document.getElementById('excel-msg');
+  msgEl.style.color = 'var(--success)';
+  msgEl.textContent = `✅ ${added} naye students import ho gaye!${dupes?' '+dupes+' pehle se the':''}${updated?' (in mein se '+updated+' records ki missing details update ho gayi)':''}${dupes?'.':''}`;
+
+  document.getElementById('excel-preview').style.display = 'none';
+  excelImportData = [];
+  btn.disabled = false; btn.textContent = '✅ Import Karo';
+}
+
+function cancelExcelImport() {
+  excelImportData = [];
+  document.getElementById('excel-preview').style.display = 'none';
+  document.getElementById('excel-msg').textContent = '';
+}
+
+// ===== INIT =====
+checkSession();
+
+// ===== PREMIUM PRINT FINISHING TOUCHES =====
+// Stamps a "Generated on <date/time>" line into every visible .print-header
+// (rendered via CSS ::after, see stylesheet) and appends a one-off closing
+// colophon line after the active page's last printable block.
+function stampPrintMeta() {
+  const stamp = new Date().toLocaleString('en-IN', {
+    day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'
+  });
+  document.querySelectorAll('.print-header').forEach(el => el.setAttribute('data-gen', stamp));
+
+  document.querySelectorAll('.print-footer').forEach(el => el.remove());
+  const activePage = document.querySelector('.page.active');
+  if (activePage) {
+    const footer = document.createElement('div');
+    footer.className = 'print-footer';
+    footer.textContent = `Government Degree College Nandasain, Chamoli, Uttarakhand · NEP 2020 Admission Record System · ${stamp}`;
+    activePage.appendChild(footer);
+  }
+}
+window.addEventListener('beforeprint', stampPrintMeta);
+</script>
+</body>
+</html>
