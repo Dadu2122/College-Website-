@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Saari Photos Hataye — GDC Nandasain</title>
+<style>
+body { font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; background:#0f1220; color:#fff; margin:0; padding:24px 18px; min-height:100vh; box-sizing:border-box; }
+h1 { font-size:1.1rem; margin:0 0 20px; }
+#log { background:#1a1e35; border-radius:10px; padding:16px; font-family:monospace; font-size:0.78rem; line-height:1.9; white-space:pre-wrap; min-height:200px; }
+.ok { color:#4ade80; }
+.err { color:#f87171; }
+.wait { color:#facc15; }
+</style>
+</head>
+<body>
+<h1>🗑️ Saari Photos Hataye — Poori Website</h1>
+<div id="log">⏳ Shuru ho raha hai…</div>
+<script>
+const FB_URL = "https://gdc-nandasain-website-default-rtdb.firebaseio.com";
+const FB_API_KEY = "AIzaSyC4ApzlJgxBCHmDib7Qa5tHJ08D84d1eO4";
+const logEl = document.getElementById('log');
+function log(msg, cls) {
+var line = document.createElement('div');
+if (cls) line.className = cls;
+line.textContent = msg;
+logEl.appendChild(line);
+window.scrollTo(0, document.body.scrollHeight);
+}
+
+async function getToken() {
+var cached = null;
+try { cached = JSON.parse(localStorage.getItem('gdc_fb_auth') || 'null'); } catch(e) {}
+if (cached && cached.refreshToken) {
+var r = await fetch('https://securetoken.googleapis.com/v1/token?key=' + FB_API_KEY, {
+method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+body: 'grant_type=refresh_token&refresh_token=' + cached.refreshToken
+});
+var j = await r.json();
+if (j.id_token) return j.id_token;
+}
+var r2 = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=' + FB_API_KEY, {
+method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ returnSecureToken: true })
+});
+var j2 = await r2.json();
+if (j2.idToken) {
+localStorage.setItem('gdc_fb_auth', JSON.stringify({ refreshToken: j2.refreshToken }));
+return j2.idToken;
+}
+throw new Error('Auth token nahi mila');
+}
+
+async function setPath(tok, path, value) {
+var resp = await fetch(FB_URL + '/' + path + '.json?auth=' + tok, {
+method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value)
+});
+if (!resp.ok) throw new Error(path + ' fail: HTTP ' + resp.status);
+}
+
+const SECRET_PASSPHRASE = "gdcnandasain2026clear"; // sirf tumhe pata honi chahiye — kisi ko share mat karna
+async function run() {
+var entered = prompt('🔒 Ye action poori website ki photos hata dega.\nContinue karne ke liye secret passphrase daalein:');
+if (entered !== SECRET_PASSPHRASE) {
+log('❌ Galat passphrase — kuch bhi delete nahi hua. Agar ye tumne try nahi kiya, kisi aur ne is link ko open karne ki koshish ki.', 'err');
+return;
+}
+try {
+log('🔐 Login ho raha hai…', 'wait');
+var tok = await getToken();
+log('✅ Login OK', 'ok');
+
+var arrayKeys = ['slider', 'gallery', 'naacTeamPhotos', 'placementGallery', 'celebration', 'infoGal'];
+var mapKeys = ['sportsDisciplinePhotos', 'infraFacilityPhotos', 'infraAmenityPhotos', 'labPhotos', 'deptActivityPhotos', 'counsellingPhotos'];
+var stringKeys = ['librarianPhoto', 'nodalCoordPhoto', 'seminarBanner', 'udyamitaPhoto', 'nssPhoto', 'sportsPrizePhoto', 'prospectusCollegePhoto', 'prospectusPrincipalPhoto', 'aboutCollegePhoto'];
+
+for (var i = 0; i < arrayKeys.length; i++) {
+var k = arrayKeys[i];
+try { await setPath(tok, 'site_images/' + k, []); log('✅ ' + k + ' khaali ho gaya', 'ok'); }
+catch(e) { log('⚠️ ' + k + ': ' + e.message, 'err'); }
+}
+for (var i = 0; i < mapKeys.length; i++) {
+var k = mapKeys[i];
+try { await setPath(tok, 'site_images/' + k, {}); log('✅ ' + k + ' khaali ho gaya', 'ok'); }
+catch(e) { log('⚠️ ' + k + ': ' + e.message, 'err'); }
+}
+for (var i = 0; i < stringKeys.length; i++) {
+var k = stringKeys[i];
+try { await setPath(tok, 'site_images/' + k, ''); log('✅ ' + k + ' khaali ho gaya', 'ok'); }
+catch(e) { log('⚠️ ' + k + ': ' + e.message, 'err'); }
+}
+for (var idx = 1; idx <= 8; idx++) {
+try { await setPath(tok, 'site_images/campusView_' + idx, ''); log('✅ Campus View slot ' + idx + ' khaali ho gaya', 'ok'); }
+catch(e) { log('⚠️ campusView_' + idx + ': ' + e.message, 'err'); }
+}
+
+// principal aur library — sirf photo field khaali karo, text preserve karo
+for (var i = 0; i < 2; i++) {
+var key = i === 0 ? 'principal' : 'library';
+try {
+var getResp = await fetch(FB_URL + '/site_images/' + key + '.json?auth=' + tok);
+var obj = await getResp.json();
+obj = (obj && typeof obj === 'object') ? obj : {};
+obj.photo = '';
+await setPath(tok, 'site_images/' + key, obj);
+log('✅ ' + key + ' ka photo khaali ho gaya (text safe hai)', 'ok');
+} catch(e) { log('⚠️ ' + key + ': ' + e.message, 'err'); }
+}
+
+// faculty photos
+try {
+var facResp = await fetch(FB_URL + '/site_content.json?auth=' + tok);
+var content = await facResp.json();
+var facultyRaw = content && content['gdc_faculty'];
+if (facultyRaw) {
+var faculty = JSON.parse(facultyRaw);
+faculty.forEach(function(f){ f.photo = ''; });
+await setPath(tok, 'site_content/gdc_faculty', JSON.stringify(faculty));
+log('✅ Faculty list ka text update hua (photos khaali)', 'ok');
+}
+var facCount = Array.isArray(faculty) ? faculty.length : 0;
+for (var idx = 0; idx < facCount; idx++) {
+try { await setPath(tok, 'site_images/facphoto_' + idx, ''); }
+catch(e) {}
+}
+if (facCount) log('✅ ' + facCount + ' faculty member(s) ki photos khaali ho gayi', 'ok');
+} catch(e) { log('⚠️ Faculty photos: ' + e.message, 'err'); }
+
+log('', '');
+log('🎉 DONE — Saari photos poori tarah hata di gayi hain.', 'ok');
+log('Ab apni asli website kholo aur refresh karo — sab khaali dikhega.', 'ok');
+} catch(e) {
+log('❌ ERROR: ' + e.message, 'err');
+}
+}
+run();
+</script>
+</body>
+</html>
