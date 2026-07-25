@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Force Text Save — GDC Nandasain</title>
+<style>
+body { font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; background:#0f1220; color:#fff; margin:0; padding:24px 18px; min-height:100vh; box-sizing:border-box; }
+h1 { font-size:1.05rem; margin:0 0 8px; }
+p.sub { font-size:0.75rem; color:rgba(255,255,255,0.55); margin:0 0 20px; line-height:1.6; }
+#log { background:#1a1e35; border-radius:10px; padding:16px; font-family:monospace; font-size:0.78rem; line-height:1.9; white-space:pre-wrap; min-height:200px; }
+.ok { color:#4ade80; }
+.err { color:#f87171; }
+.wait { color:#facc15; }
+</style>
+</head>
+<body>
+<h1>💾 Force Text Save — Poori Website</h1>
+<p class="sub">Ye is phone/browser mein abhi jo bhi text (notice, ticker, saari fields) hai, use zabardasti Firebase par bhej dega aur turant verify karega ki sahi pahuncha ya nahi.<br/><br/><b>Zaroori:</b> Isko usi device/browser mein kholna jahan tumne abhi-abhi text edit kiya tha — kisi aur device mein kholne se kuch fayda nahi hoga.</p>
+<div id="log">⏳ Shuru ho raha hai…</div>
+<script>
+const FB_URL = "https://gdc-nandasain-website-default-rtdb.firebaseio.com";
+const FB_API_KEY = "AIzaSyC4ApzlJgxBCHmDib7Qa5tHJ08D84d1eO4";
+const SECRET_PASSPHRASE = "gdcnandasain2026clear"; // sirf tumhe pata honi chahiye
+const logEl = document.getElementById('log');
+function log(msg, cls) {
+var line = document.createElement('div');
+if (cls) line.className = cls;
+line.textContent = msg;
+logEl.appendChild(line);
+window.scrollTo(0, document.body.scrollHeight);
+}
+
+async function getToken() {
+var cached = null;
+try { cached = JSON.parse(localStorage.getItem('gdc_fb_auth') || 'null'); } catch(e) {}
+if (cached && cached.refreshToken) {
+var r = await fetch('https://securetoken.googleapis.com/v1/token?key=' + FB_API_KEY, {
+method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+body: 'grant_type=refresh_token&refresh_token=' + cached.refreshToken
+});
+var j = await r.json();
+if (j.id_token) return j.id_token;
+}
+var r2 = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=' + FB_API_KEY, {
+method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ returnSecureToken: true })
+});
+var j2 = await r2.json();
+if (j2.idToken) {
+localStorage.setItem('gdc_fb_auth', JSON.stringify({ refreshToken: j2.refreshToken }));
+return j2.idToken;
+}
+throw new Error('Auth token nahi mila');
+}
+
+async function run() {
+var entered = prompt('🔒 Ye is device ka poora text zabardasti cloud par bhej dega.\nSecret passphrase daalein:');
+if (entered !== SECRET_PASSPHRASE) {
+log('❌ Galat passphrase — kuch bhi nahi hua.', 'err');
+return;
+}
+try {
+log('🔐 Login ho raha hai…', 'wait');
+var tok = await getToken();
+log('✅ Login OK', 'ok');
+
+// Is browser ke saare 'gdc_' prefix wale text fields collect karo
+var blob = {};
+var count = 0;
+for (var i = 0; i < localStorage.length; i++) {
+var k = localStorage.key(i);
+if (!k) continue;
+if (k.indexOf('gdc_') === 0 || k === 'gdcTicker' || k === 'gdcTickerEn' || k.indexOf('gdcTicker_') === 0) {
+blob[k] = localStorage.getItem(k);
+count++;
+}
+}
+log('📋 ' + count + ' text field(s) mile is device mein', 'wait');
+blob['gdc_updatedAt'] = String(Date.now());
+
+log('☁️ Cloud par bhej rahe hain…', 'wait');
+var resp = await fetch(FB_URL + '/site_content.json?auth=' + tok, {
+method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(blob)
+});
+if (!resp.ok) throw new Error('Save fail: HTTP ' + resp.status);
+log('✅ Save ho gaya', 'ok');
+
+log('🔍 Verify kar rahe hain…', 'wait');
+var verifyResp = await fetch(FB_URL + '/site_content.json?auth=' + tok + '&_v=' + Date.now());
+var verifyData = await verifyResp.json();
+var mismatches = [];
+Object.keys(blob).forEach(function(k){
+if (verifyData[k] !== blob[k]) mismatches.push(k);
+});
+if (mismatches.length === 0) {
+log('🎉 DONE — Saara text (' + count + ' fields) cloud par 100% match ho raha hai.', 'ok');
+} else {
+log('⚠️ Ye fields match nahi hue: ' + mismatches.join(', '), 'err');
+}
+} catch(e) {
+log('❌ ERROR: ' + e.message, 'err');
+}
+}
+run();
+</script>
+</body>
+</html>
