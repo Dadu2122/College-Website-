@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Photo Upload — GDC Nandasain</title>
+<style>
+body { font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; background:#0f1220; color:#fff; margin:0; padding:24px 18px; min-height:100vh; box-sizing:border-box; }
+h1 { font-size:1.05rem; margin:0 0 6px; }
+p.sub { font-size:0.75rem; color:rgba(255,255,255,0.55); margin:0 0 20px; line-height:1.6; }
+label { display:block; font-size:0.72rem; font-weight:700; color:#d8b15e; margin:16px 0 6px; }
+select, input[type="file"], input[type="text"], input[type="date"], textarea { width:100%; box-sizing:border-box; background:#1a1e35; color:#fff; border:1px solid #333a55; border-radius:8px; padding:12px; font-size:0.85rem; font-family:inherit; }
+textarea { resize:vertical; min-height:70px; }
+button { width:100%; margin-top:20px; background:linear-gradient(135deg,#d8b15e,#f5c842); color:#1a1400; border:none; border-radius:10px; padding:14px; font-weight:800; font-size:0.9rem; cursor:pointer; }
+button:disabled { opacity:0.5; }
+#log { background:#1a1e35; border-radius:10px; padding:16px; font-family:monospace; font-size:0.78rem; line-height:1.9; white-space:pre-wrap; min-height:60px; margin-top:20px; display:none; }
+.ok { color:#4ade80; }
+.err { color:#f87171; }
+.wait { color:#facc15; }
+.hint { font-size:0.66rem; color:rgba(255,255,255,0.4); margin-top:4px; line-height:1.5; }
+.optional-tag { color:rgba(255,255,255,0.35); font-weight:400; }
+</style>
+</head>
+<body>
+<h1>📸 Photo Upload — GDC Nandasain</h1>
+<p style="font-size:0.62rem;color:#555;margin:0 0 10px;">build: 2026-07-26-v3-solid</p>
+<p class="sub">Section chuno, form bharo, photo(s) select karo, "Upload Karo" dabao — seedha Firebase par chala jayega, Admin Panel kholne ki zaroorat nahi.</p>
+
+<label>Section chuno</label>
+<select id="sectionSelect">
+<option value="slider">🖼️ Slider (Hero)</option>
+<option value="gallery">📷 Gallery</option>
+<option value="campusView">🏫 Campus View (slot chuno)</option>
+<option value="infoGallery">🗂️ Info Gallery (Library / NSS / Cultural / Green Campus / Sports)</option>
+<option value="news">📰 News &amp; Events (naya item)</option>
+<option value="principal">👨‍💼 Principal Photo</option>
+<option value="library">📚 Library Photo</option>
+<option value="librarianPhoto">📚 Librarian Photo</option>
+<option value="nodalCoordPhoto">🗂️ Nodal Coordinator Photo</option>
+<option value="seminarBanner">🎪 Seminar Banner</option>
+<option value="aboutCollegePhoto">🏛️ About College Photo</option>
+<option value="nssPhoto">🇮🇳 NSS Photo</option>
+<option value="udyamitaPhoto">💼 Udyamita Photo</option>
+<option value="sportsPrizePhoto">🏆 Sports Prize Photo</option>
+<option value="naacTeamPhotos">🏅 NAAC Team Photos (add hoga)</option>
+<option value="placementGallery">💼 Placement Gallery (add hoga)</option>
+<option value="prospectusCollegePhoto">📋 Prospectus — College Photo</option>
+<option value="prospectusPrincipalPhoto">📋 Prospectus — Principal Photo</option>
+<option value="rtiPioSignature">✍️ RTI Reply Signature</option>
+</select>
+
+<div id="campusSlotWrap" style="display:none;">
+<label>Campus View — kaunsa slot?</label>
+<select id="campusSlot">
+<option value="1">🏛️ Slot 1 — मुख्य भवन (Main Building)</option>
+<option value="2">📚 Slot 2 — पुस्तकालय (Library)</option>
+<option value="3">🧑‍🏫 Slot 3 — कक्षा कक्ष (Classrooms)</option>
+<option value="4">🏆 Slot 4 — खेल मैदान (Sports Ground)</option>
+<option value="5">🇮🇳 Slot 5 — एनएसएस शिविर (NSS Camp)</option>
+<option value="6">🎉 Slot 6 — वार्षिक समारोह (Annual Function)</option>
+<option value="7">👩‍🎓 Slot 7 — छात्र गतिविधियाँ (Student Activities)</option>
+<option value="8">🌳 Slot 8 — परिसर उद्यान (Campus Garden)</option>
+</select>
+</div>
+
+<div id="infoGalWrap" style="display:none;">
+<label>Info Gallery — kaunsi category?</label>
+<select id="infoGalCategory">
+<option value="library">📚 Library</option>
+<option value="nss">🇮🇳 NSS</option>
+<option value="cultural">🎭 Cultural</option>
+<option value="greenCampus">🌳 Green Campus</option>
+<option value="sportsAnnual">🏆 Sports Annual</option>
+</select>
+<label>Photo number (1-6)</label>
+<select id="infoGalSlot">
+<option value="1">Photo 1</option><option value="2">Photo 2</option><option value="3">Photo 3</option>
+<option value="4">Photo 4</option><option value="5">Photo 5</option><option value="6">Photo 6</option>
+</select>
+</div>
+
+<div id="newsFieldsWrap" style="display:none;">
+<label>शीर्षक — हिंदी (Title — Hindi)</label>
+<input id="newsTitleHi" placeholder="जैसे: वार्षिकोत्सव का आयोजन" type="text"/>
+<label>Title — English <span class="optional-tag">(optional)</span></label>
+<input id="newsTitleEn" placeholder="e.g. Annual Function Held" type="text"/>
+<label>Type</label>
+<select id="newsTag">
+<option value="Event">📢 Event</option>
+<option value="Achievement">🏆 Achievement</option>
+<option value="Notice">📋 Notice</option>
+</select>
+<label>Date</label>
+<input id="newsDate" type="text"/>
+<label>Poora Vivaran <span class="optional-tag">(optional)</span></label>
+<textarea id="newsFullText" placeholder="Agar poora likha hua vivaran dena hai toh yahan likhein..."></textarea>
+<p class="hint">📷 Photo neeche se optional hai — agar nahi lagaoge toh icon dikhega website par.</p>
+</div>
+
+<label id="photoLabel">Photo(s) select karo (multiple bhi chalega)</label>
+<input type="file" id="fileInput" accept="image/*" multiple/>
+<div id="previewWrap" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;"></div>
+
+<button id="uploadBtn" disabled>📤 Upload Karo</button>
+<div id="log"></div>
+
+<script>
+const FB_URL = "https://gdc-nandasain-website-default-rtdb.firebaseio.com";
+const FB_API_KEY = "AIzaSyC4ApzlJgxBCHmDib7Qa5tHJ08D84d1eO4";
+
+// section behaviour map
+const ARRAY_SRC_CAPTION = ['slider', 'gallery'];               // {src, caption}
+const DATA_ARRAY_CAPTION = ['naacTeamPhotos'];                  // {data, caption}
+const DATA_ARRAY_ONLY = ['placementGallery'];                   // {data}
+const MERGE_OBJECT = ['principal', 'library'];                  // obj.photo = url, keep rest
+const SLOT_SECTIONS = ['campusView', 'infoGallery'];            // dynamic key name
+
+const logEl = document.getElementById('log');
+const uploadBtn = document.getElementById('uploadBtn');
+const fileInput = document.getElementById('fileInput');
+const sectionSelect = document.getElementById('sectionSelect');
+const campusSlotWrap = document.getElementById('campusSlotWrap');
+const infoGalWrap = document.getElementById('infoGalWrap');
+const newsFieldsWrap = document.getElementById('newsFieldsWrap');
+const photoLabel = document.getElementById('photoLabel');
+const newsDateInput = document.getElementById('newsDate');
+
+// default news date = aaj ki tareekh, Hindi-friendly long format
+(function setDefaultNewsDate(){
+var d = new Date();
+newsDateInput.value = d.toLocaleDateString('en-IN', { day:'numeric', month:'long', year:'numeric' });
+})();
+
+var compressedDataUrls = [];
+
+function refreshFieldVisibility() {
+var v = sectionSelect.value;
+campusSlotWrap.style.display = (v === 'campusView') ? 'block' : 'none';
+infoGalWrap.style.display = (v === 'infoGallery') ? 'block' : 'none';
+newsFieldsWrap.style.display = (v === 'news') ? 'block' : 'none';
+photoLabel.textContent = (v === 'news') ? 'Photo (optional)' : 'Photo(s) select karo (multiple bhi chalega)';
+var isMultiOk = (ARRAY_SRC_CAPTION.indexOf(v) !== -1 || DATA_ARRAY_CAPTION.indexOf(v) !== -1 || DATA_ARRAY_ONLY.indexOf(v) !== -1);
+fileInput.multiple = isMultiOk;
+updateUploadBtnState();
+}
+sectionSelect.addEventListener('change', refreshFieldVisibility);
+refreshFieldVisibility();
+
+function compressFile(file) {
+return new Promise(function(resolve){
+var reader = new FileReader();
+reader.onload = function(e){
+var img = new Image();
+img.onload = function(){
+var maxW = 1600, maxH = 1200;
+var w = img.width, h = img.height;
+if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
+if (h > maxH) { w = Math.round(w * maxH / h); h = maxH; }
+var canvas = document.createElement('canvas');
+canvas.width = w; canvas.height = h;
+var ctx = canvas.getContext('2d');
+ctx.drawImage(img, 0, 0, w, h);
+var q = 0.85, dataUrl = canvas.toDataURL('image/jpeg', q);
+var safety = 0;
+while ((dataUrl.length / 1024) > 250 && w > 200 && safety < 20) {
+w = Math.round(w * 0.88); h = Math.round(h * 0.88);
+canvas.width = w; canvas.height = h;
+ctx.clearRect(0,0,w,h);
+ctx.drawImage(img, 0, 0, w, h);
+dataUrl = canvas.toDataURL('image/jpeg', Math.max(q, 0.5));
+safety++;
+}
+resolve(dataUrl);
+};
+img.src = e.target.result;
+};
+reader.readAsDataURL(file);
+});
+}
+
+function updateUploadBtnState() {
+var v = sectionSelect.value;
+if (v === 'news') {
+uploadBtn.disabled = !document.getElementById('newsTitleHi').value.trim();
+} else {
+uploadBtn.disabled = !compressedDataUrls.length;
+}
+}
+document.getElementById('newsTitleHi').addEventListener('input', updateUploadBtnState);
+
+fileInput.addEventListener('change', async function(){
+var files = Array.from(fileInput.files || []);
+compressedDataUrls = [];
+var previewWrap = document.getElementById('previewWrap');
+previewWrap.innerHTML = '';
+if (!files.length) { updateUploadBtnState(); return; }
+uploadBtn.disabled = true;
+for (var i = 0; i < files.length; i++) {
+var dataUrl = await compressFile(files[i]);
+compressedDataUrls.push(dataUrl);
+var img = document.createElement('img');
+img.src = dataUrl;
+img.style.cssText = 'width:100px;height:100px;object-fit:cover;border-radius:8px;';
+previewWrap.appendChild(img);
+}
+updateUploadBtnState();
+});
+
+async function getToken() {
+var cached = null;
+try { cached = JSON.parse(localStorage.getItem('gdc_fb_auth_v2') || 'null'); } catch(e) {}
+if (cached && cached.refreshToken) {
+var r = await fetch('https://securetoken.googleapis.com/v1/token?key=' + FB_API_KEY, {
+method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+body: 'grant_type=refresh_token&refresh_token=' + cached.refreshToken
+});
+var j = await r.json();
+if (j.id_token) return j.id_token;
+}
+var email = prompt('🔐 Admin email daalein:');
+if (!email) throw new Error('Email nahi diya');
+var pass = prompt('🔒 Admin password daalein:');
+if (!pass) throw new Error('Password nahi diya');
+var r2 = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=' + FB_API_KEY, {
+method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email, password: pass, returnSecureToken: true })
+});
+var j2 = await r2.json();
+if (j2.idToken) {
+localStorage.setItem('gdc_fb_auth_v2', JSON.stringify({ refreshToken: j2.refreshToken }));
+return j2.idToken;
+}
+throw new Error('Login fail: ' + ((j2.error && j2.error.message) || 'galat email/password'));
+}
+
+function log(msg, cls) {
+logEl.style.display = 'block';
+var line = document.createElement('div');
+if (cls) line.className = cls;
+line.textContent = msg;
+logEl.appendChild(line);
+}
+
+async function getPath(tok, path) {
+var resp = await fetch(FB_URL + '/' + path + '.json?auth=' + tok);
+if (!resp.ok) return null;
+return resp.json();
+}
+
+async function setPath(tok, path, value) {
+var resp = await fetch(FB_URL + '/' + path + '.json?auth=' + tok, {
+method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value)
+});
+if (!resp.ok) throw new Error(path + ' fail: HTTP ' + resp.status);
+}
+
+function slotKeyFor(section) {
+if (section === 'campusView') {
+return 'campusView_' + document.getElementById('campusSlot').value;
+}
+if (section === 'infoGallery') {
+var cat = document.getElementById('infoGalCategory').value;
+var slot = document.getElementById('infoGalSlot').value;
+return 'infoGal_' + cat + '_' + slot;
+}
+return null;
+}
+
+uploadBtn.addEventListener('click', async function(){
+var section = sectionSelect.value;
+if (section !== 'news' && !compressedDataUrls.length) return;
+uploadBtn.disabled = true;
+logEl.innerHTML = '';
+try {
+log('🔐 Login ho raha hai…', 'wait');
+var tok = await getToken();
+log('✅ Login OK', 'ok');
+
+if (section === 'news') {
+log('📥 Purani News list la rahe hain…', 'wait');
+var existingNews = await getPath(tok, 'news');
+var newsList = Array.isArray(existingNews) ? existingNews : [];
+var tag = document.getElementById('newsTag').value;
+var iconMap = { Event: '📢', Achievement: '🏆', Notice: '📋' };
+var newItem = {
+icon: iconMap[tag] || '📢',
+tag: tag,
+title: document.getElementById('newsTitleHi').value.trim(),
+title_en: document.getElementById('newsTitleEn').value.trim(),
+date: newsDateInput.value.trim(),
+photo: compressedDataUrls.length ? compressedDataUrls[0] : '',
+photoFit: 'crop',
+fullText: document.getElementById('newsFullText').value.trim(),
+pdfData: ''
+};
+newsList.unshift(newItem);
+log('☁️ Naya News item upload ho raha hai…', 'wait');
+await setPath(tok, 'news', newsList);
+log('🎉 DONE — News item add ho gaya!', 'ok');
+log('🔍 Verify kar rahe hain…', 'wait');
+var verifyNews = await getPath(tok, 'news');
+var okNews = Array.isArray(verifyNews) && verifyNews.length && verifyNews[0] && verifyNews[0].title === newItem.title;
+log(okNews ? '✅ MATCH — Firebase mein News item confirm ho gaya.' : '⚠️ MISMATCH — dobara try karein.', okNews ? 'ok' : 'err');
+log('Ab apni website kholo aur refresh karo.', 'ok');
+uploadBtn.disabled = false;
+return;
+}
+
+if (SLOT_SECTIONS.indexOf(section) !== -1) {
+var key = slotKeyFor(section);
+var path = 'site_images/' + key;
+log('☁️ ' + key + ' mein upload ho raha hai…', 'wait');
+await setPath(tok, path, compressedDataUrls[0]);
+log('🎉 DONE — Photo upload ho gayi!', 'ok');
+log('🔍 Verify kar rahe hain…', 'wait');
+var verifySlot = await getPath(tok, path);
+var okSlot = verifySlot === compressedDataUrls[0];
+log(okSlot ? '✅ MATCH — Firebase mein photo confirm ho gayi hai.' : '⚠️ MISMATCH — dobara try karein.', okSlot ? 'ok' : 'err');
+log('Ab apni website kholo aur refresh karo.', 'ok');
+uploadBtn.disabled = false;
+return;
+}
+
+var path = 'site_images/' + section;
+
+if (ARRAY_SRC_CAPTION.indexOf(section) !== -1) {
+log('📥 Purani list la rahe hain…', 'wait');
+var existing = await getPath(tok, path);
+var list = Array.isArray(existing) ? existing : [];
+compressedDataUrls.forEach(function(url){ list.push({ src: url, caption: '' }); });
+log('☁️ ' + compressedDataUrls.length + ' photo(s) upload ho rahi hain…', 'wait');
+await setPath(tok, path, list);
+} else if (DATA_ARRAY_CAPTION.indexOf(section) !== -1) {
+log('📥 Purani list la rahe hain…', 'wait');
+var existingD = await getPath(tok, path);
+var listD = Array.isArray(existingD) ? existingD : [];
+compressedDataUrls.forEach(function(url){ listD.push({ data: url, caption: '' }); });
+log('☁️ ' + compressedDataUrls.length + ' photo(s) upload ho rahi hain…', 'wait');
+await setPath(tok, path, listD);
+} else if (DATA_ARRAY_ONLY.indexOf(section) !== -1) {
+log('📥 Purani list la rahe hain…', 'wait');
+var existingP = await getPath(tok, path);
+var listP = Array.isArray(existingP) ? existingP : [];
+compressedDataUrls.forEach(function(url){ listP.push({ data: url }); });
+log('☁️ ' + compressedDataUrls.length + ' photo(s) upload ho rahi hain…', 'wait');
+await setPath(tok, path, listP);
+} else if (MERGE_OBJECT.indexOf(section) !== -1) {
+log('📥 Purana data la rahe hain…', 'wait');
+var existingO = await getPath(tok, path);
+var obj = (existingO && typeof existingO === 'object') ? existingO : {};
+obj.photo = compressedDataUrls[0];
+log('☁️ Upload ho raha hai (sirf pehli photo use hogi)…', 'wait');
+await setPath(tok, path, obj);
+} else {
+log('☁️ Upload ho raha hai (sirf pehli photo use hogi, kyunki ye single-photo section hai)…', 'wait');
+await setPath(tok, path, compressedDataUrls[0]);
+}
+
+log('🎉 DONE — Photo(s) safaltapoorvak upload ho gayi!', 'ok');
+
+log('🔍 Verify kar rahe hain…', 'wait');
+var verifyData = await getPath(tok, path);
+var verifyOk = false;
+if (ARRAY_SRC_CAPTION.indexOf(section) !== -1) {
+verifyOk = Array.isArray(verifyData) && verifyData.length > 0 && verifyData.some(function(item){ return compressedDataUrls.indexOf(item && item.src) !== -1; });
+} else if (DATA_ARRAY_CAPTION.indexOf(section) !== -1 || DATA_ARRAY_ONLY.indexOf(section) !== -1) {
+verifyOk = Array.isArray(verifyData) && verifyData.length > 0 && verifyData.some(function(item){ return compressedDataUrls.indexOf(item && item.data) !== -1; });
+} else if (MERGE_OBJECT.indexOf(section) !== -1) {
+verifyOk = verifyData && verifyData.photo === compressedDataUrls[0];
+} else {
+verifyOk = verifyData === compressedDataUrls[0];
+}
+if (verifyOk) {
+log('✅ MATCH — Firebase mein photo confirm ho gayi hai.', 'ok');
+} else {
+log('⚠️ MISMATCH — Firebase mein photo nahi mili jo abhi bhejii thi! Dobara try karein.', 'err');
+}
+
+log('Ab apni website kholo aur refresh karo.', 'ok');
+} catch(e) {
+log('❌ ERROR: ' + e.message, 'err');
+}
+uploadBtn.disabled = false;
+});
+</script>
+</body>
+</html>
