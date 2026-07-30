@@ -1,1 +1,11 @@
-{"v":"2026-07-29-v115-thich-gold-border"}
+{
+  "version": "2026-07-30-v131-notice-plain-dot",
+  "date": "2026-07-30",
+  "changes": [
+    "Quicknav ticker (Student Support System bar) background changed from bright green to dark navy with gold top/bottom border, text white",
+    "Notice Board 'Live Updates' badge: removed text label, kept only centered red dot",
+    "Notice Board badge: removed button/bevel styling (background, border, box-shadow) — now a plain blinking red dot only"
+  ],
+  "file": "index.html",
+  "author": "Shreeyog Website and App Designer"
+}
