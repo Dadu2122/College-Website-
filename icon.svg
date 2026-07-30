@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#151a35"/>
+  <circle cx="256" cy="256" r="220" fill="none" stroke="#d4af37" stroke-width="16"/>
+  <text x="256" y="230" font-family="Arial, sans-serif" font-weight="800" font-size="130" fill="#d4af37" text-anchor="middle">GDC</text>
+  <text x="256" y="330" font-family="Arial, sans-serif" font-weight="700" font-size="48" fill="#ffffff" text-anchor="middle">NANDASAIN</text>
+</svg>
